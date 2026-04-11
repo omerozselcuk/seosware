@@ -9,14 +9,15 @@ Seosware crawls your pages with a real Chromium browser, extracts 100+ SEO signa
 ## ✨ Features
 
 ### 🕷️ Core SEO Audit
+- **Site-wide Crawler** — Orphan pages detection, link graph, crawl depth, and near-duplicate content similarity checking
 - **Meta Tags** — Title, Description, Canonical, Open Graph, Twitter Cards
 - **Content** — Heading hierarchy (H1-H6), JSON-LD schema validation, word count
 - **Images** — Alt attribute checks, lazy-load verification via scroll simulation
-- **Links** — Internal/external link analysis, broken hrefs, hreflang tags
-- **Performance** — LCP, CLS, Long Tasks, render-blocking resources, unused CSS (via CDP)
+- **Links** — Internal/external, target blank rels, pagination (rel next/prev), infinite scroll, ARIA labels, tab order
+- **Performance** — INP (Interaction to Next Paint) sim, Unused CSS/JS coverage, LCP, CLS, Long Tasks, render-blocking resources
 - **Rendering** — SSR vs CSR comparison with cosine similarity scoring
 - **Mobile** — Viewport overflow, tap target sizes, font size issues
-- **Security** — HTTPS, mixed content, robots.txt compliance
+- **Security** — HTTPS, HSTS, X-Frame-Options, mixed content, large files
 
 ### 🤖 AI Search Readiness
 - **`/llms.txt` & `/llms-full.txt`** — Existence and spec compliance (H1, blockquote, markdown format)
@@ -83,10 +84,11 @@ seosware/
 │   │   ├── content.js          # Content & headings audit
 │   │   ├── images.js           # Image audit
 │   │   ├── links.js            # Link & accessibility audit
-│   │   ├── performance.js      # Core Web Vitals audit
+│   │   ├── performance.js      # Core Web Vitals, Coverage, INP
 │   │   ├── rendering.js        # SSR vs CSR audit
 │   │   ├── mobile.js           # Mobile simulation audit
 │   │   └── ai-search-auditor.js # AI Search Readiness audit
+│   ├── crawler.js              # Site-wide spider & orphan pages
 │   ├── reporters/
 │   │   ├── consoleReporter.js  # Terminal output
 │   │   ├── jsonReporter.js     # JSON file output

@@ -699,8 +699,11 @@
       <span class="url-count" id="urlCount">0 URL eklendi</span>
       <div style="display:flex; gap:12px;">
         <button class="btn btn-danger" onclick="clearUrls()" id="clearBtn" style="display:none">Temizle</button>
+        <button class="btn btn-add" onclick="startSiteAudit()" id="startSiteBtn" disabled>
+          🕸️ Site Crawl
+        </button>
         <button class="btn btn-primary" onclick="startAudit()" id="startBtn" disabled>
-          🚀 Audit Başlat
+          🚀 Page Audit
         </button>
       </div>
     </div>
@@ -708,7 +711,10 @@
 
   <!-- PROGRESS -->
   <section class="progress-section" id="progressSection">
-    <div class="section-title">⏳ Audit çalışıyor...</div>
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+      <div class="section-title">⏳ Audit çalışıyor...</div>
+      <button class="btn btn-danger" onclick="cancelAudit()" id="cancelBtn" style="padding: 6px 12px; font-size: 12px;">🛑 İptal Et</button>
+    </div>
     <div class="progress-bar-track">
       <div class="progress-bar-fill" id="progressBar"></div>
     </div>
@@ -777,6 +783,7 @@
     `).join('');
     document.getElementById('urlCount').textContent = `${urls.length} URL eklendi`;
     document.getElementById('startBtn').disabled = urls.length === 0;
+    document.getElementById('startSiteBtn').disabled = urls.length === 0;
     document.getElementById('clearBtn').style.display = urls.length > 0 ? 'inline-flex' : 'none';
   }
 
@@ -785,6 +792,9 @@
     if (urls.length === 0) return;
 
     document.getElementById('startBtn').disabled = true;
+    document.getElementById('startSiteBtn').disabled = true;
+    document.getElementById('cancelBtn').disabled = false;
+    document.getElementById('cancelBtn').textContent = '🛑 İptal Et';
     document.getElementById('statusDot').classList.add('running');
     document.getElementById('statusText').textContent = 'Çalışıyor...';
     document.getElementById('progressSection').classList.add('active');
@@ -822,6 +832,7 @@
       document.getElementById('statusText').textContent = 'Tamamlandı';
       document.getElementById('progressSection').classList.remove('active');
       document.getElementById('startBtn').disabled = false;
+      document.getElementById('startSiteBtn').disabled = false;
       renderResults();
     });
 
@@ -834,6 +845,78 @@
       });
     } catch(err) {
       console.error(err);
+    }
+  }
+
+  async function startSiteAudit() {
+    if (urls.length === 0) return;
+
+    document.getElementById('startBtn').disabled = true;
+    document.getElementById('startSiteBtn').disabled = true;
+    document.getElementById('cancelBtn').disabled = false;
+    document.getElementById('cancelBtn').textContent = '🛑 İptal Et';
+    document.getElementById('statusDot').classList.add('running');
+    document.getElementById('statusText').textContent = 'Site taranıyor...';
+    document.getElementById('progressSection').classList.add('active');
+    document.getElementById('emptyState').style.display = 'none';
+    document.getElementById('resultsSection').classList.remove('active');
+    document.getElementById('logFeed').innerHTML = '';
+    results = [];
+
+    // SSE bağlantısı
+    eventSource = new EventSource('/api/events');
+
+    eventSource.addEventListener('progress', e => {
+      const d = JSON.parse(e.data);
+      const pct = Math.round((d.current / d.total) * 100);
+      document.getElementById('progressBar').style.width = pct + '%';
+      document.getElementById('progressUrl').textContent = d.url;
+      document.getElementById('progressCount').textContent = `Crawling...`;
+    });
+
+    eventSource.addEventListener('log', e => {
+      const d = JSON.parse(e.data);
+      const feed = document.getElementById('logFeed');
+      feed.innerHTML += `<div>${d.message}</div>`;
+      feed.scrollTop = feed.scrollHeight;
+    });
+
+    eventSource.addEventListener('result', e => {
+      const d = JSON.parse(e.data);
+      results.push(d.result);
+    });
+
+    eventSource.addEventListener('completed', e => {
+      eventSource.close();
+      document.getElementById('statusDot').classList.remove('running');
+      document.getElementById('statusText').textContent = 'Tamamlandı';
+      document.getElementById('progressSection').classList.remove('active');
+      document.getElementById('startBtn').disabled = false;
+      document.getElementById('startSiteBtn').disabled = false;
+      renderResults();
+    });
+
+    try {
+      await fetch('/api/site-audit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        // Use the first URL for site crawl, default maxPages=20, maxDepth=3
+        body: JSON.stringify({ url: urls[0], maxPages: 20, maxDepth: 3 })
+      });
+    } catch(err) {
+      console.error(err);
+    }
+  }
+
+  // ─── CANCEL AUDIT ───
+  async function cancelAudit() {
+    const btn = document.getElementById('cancelBtn');
+    btn.textContent = 'İptal Ediliyor...';
+    btn.disabled = true;
+    try {
+      await fetch('/api/cancel', { method: 'POST' });
+    } catch (e) {
+      console.error(e);
     }
   }
 
@@ -868,7 +951,50 @@
       document.getElementById('resultsContent').innerHTML = `<div class="empty-state"><div class="empty-state-icon">❌</div><div class="empty-state-text">Audit hatası: ${r?.error || 'Bilinmeyen'}</div></div>`;
       return;
     }
-    document.getElementById('resultsContent').innerHTML = buildOverview(r) + buildDetailPanels(r);
+    
+    if (r.type === 'site-audit') {
+      document.getElementById('resultsContent').innerHTML = buildSiteAuditResults(r.siteAudit);
+    } else {
+      document.getElementById('resultsContent').innerHTML = buildOverview(r) + buildDetailPanels(r);
+    }
+  }
+
+  function buildSiteAuditResults(sa) {
+    if (!sa) return '';
+    return `<div class="overview-grid">
+      ${overviewCard('SAYFALAR', '📄', sa.crawledCount || 0, 'Taranan Sayfa', 'grade-b')}
+      ${overviewCard('DERİNLİK', '📉', sa.maxDepthReached || 0, 'Maksimum Tıklama', 'grade-b')}
+      ${overviewCard('SITEMAP URL', '🗺️', sa.sitemapUrlCount || 0, 'Sitemap İçinde', 'grade-c')}
+      ${overviewCard('ORPHAN PAGES', '👻', (sa.orphans || []).length, 'Bağlantısız Sayfa', (sa.orphans||[]).length > 0 ? 'grade-d' : 'grade-a')}
+      ${overviewCard('BENZER İÇERİK', '👯', (sa.duplicates || []).length, 'Near-Duplicate', (sa.duplicates||[]).length > 0 ? 'grade-orange' : 'grade-green')}
+      ${overviewCard('KIRIK LİNKLER', '💔', sa.brokenLinks || 0, '404 / 500 Hata', sa.brokenLinks > 0 ? 'grade-d' : 'grade-a')}
+    </div>
+    
+    <div class="detail-grid">
+      <!-- Orphans Panel -->
+      <div class="detail-panel">
+        <div class="panel-title">👻 Orphan Pages (Yetim Sayfalar)</div>
+        <p style="font-size:12px;color:var(--text-muted);margin-bottom:12px">Sitemap'te olup site içinden link verilmeyen sayfalar.</p>
+        ${(sa.orphans || []).length === 0 
+          ? '<div class="badge badge-green">Sorun yok</div>' 
+          : `<div class="log-feed" style="max-height:200px">` + sa.orphans.map(o => `<div>${o}</div>`).join('') + `</div>`
+        }
+      </div>
+
+      <!-- Duplicates Panel -->
+      <div class="detail-panel">
+        <div class="panel-title">👯 Near-Duplicate Analizi</div>
+        <p style="font-size:12px;color:var(--text-muted);margin-bottom:12px">Benzer içerik / aynı title-desc kullanan sayfalar.</p>
+        ${(sa.duplicates || []).length === 0 
+          ? '<div class="badge badge-green">Kopya içerik yok</div>' 
+          : `<div class="log-feed" style="max-height:200px">` + sa.duplicates.map(d => `<div style="margin-bottom:8px;border-bottom:1px solid var(--border);padding-bottom:8px">
+              <b>Sim: ${d.similarity}%</b> ${d.exactMeta ? '(Aynı Meta)' : ''}<br>
+              <a href="#" style="color:var(--accent-light)">${d.url1}</a><br>
+              <a href="#" style="color:var(--accent-light)">${d.url2}</a>
+            </div>`).join('') + `</div>`
+        }
+      </div>
+    </div>`;
   }
 
   function gradeClass(grade) {
@@ -943,6 +1069,7 @@
   // ─── DETAIL PANELS ───
   function buildDetailPanels(r) {
     return `<div class="detail-grid">
+      ${buildSecurityPanel(r)}
       ${buildMetaPanel(r)}
       ${buildAIPanel(r)}
       ${buildContentPanel(r)}
@@ -965,6 +1092,17 @@
       <div class="stat-row"><span class="stat-label">OG Image</span><span class="stat-value">${m.ogImage ? '✅' : '❌'}</span></div>
       <div class="stat-row"><span class="stat-label">Twitter Card</span><span class="stat-value">${m.twitterCard || '❌'}</span></div>
       <div class="stat-row"><span class="stat-label">Robots</span><span class="stat-value"><span class="tag">${m.robots || '—'}</span></span></div>
+    </div>`;
+  }
+
+  function buildSecurityPanel(r) {
+    const s = r.security || {};
+    return `<div class="detail-panel">
+      <div class="panel-title">🛡️ Güvenlik Yönergeleri</div>
+      <div class="stat-row"><span class="stat-label">HTTPS Bağlantısı</span><span class="stat-value">${s.isHttps ? '✅' : '❌'}</span></div>
+      <div class="stat-row"><span class="stat-label">HSTS Aktif</span><span class="stat-value">${s.hsts ? '✅' : '❌'}</span></div>
+      <div class="stat-row"><span class="stat-label">X-Frame-Options</span><span class="stat-value"><span class="tag">${s.xFrameOptions || 'Yok'}</span></span></div>
+      <div class="stat-row"><span class="stat-label">Mixed Content</span><span class="stat-value">${badge((s.mixedContent||[]).length, 0, 0)}</span></div>
     </div>`;
   }
 
@@ -1041,11 +1179,13 @@
       <div class="stat-row"><span class="stat-label">DOM Content Loaded</span><span class="stat-value">${p.domContentLoaded||'—'}ms</span></div>
       <div class="stat-row"><span class="stat-label">Fully Loaded</span><span class="stat-value">${p.fullyLoaded||'—'}ms</span></div>
       <div class="stat-row"><span class="stat-label">LCP</span><span class="stat-value">${p.lcp ? Math.round(p.lcp)+'ms' : '—'}</span></div>
+      <div class="stat-row"><span class="stat-label">INP (Simulated)</span><span class="stat-value">${p.inp != null ? p.inp+'ms' : '—'}</span></div>
       <div class="stat-row"><span class="stat-label">CLS</span><span class="stat-value">${p.cls != null ? p.cls : '—'}</span></div>
       <div class="stat-row"><span class="stat-label">Long Tasks</span><span class="stat-value">${(p.longTasks||[]).length}</span></div>
       <div class="stat-row"><span class="stat-label">Render Blocking</span><span class="stat-value">${badge((p.renderBlockingResources||[]).length, 5, 15)}</span></div>
       <div class="stat-row"><span class="stat-label">Unused CSS</span><span class="stat-value">${p.unusedCssPercent != null ? p.unusedCssPercent+'%' : '—'}</span></div>
-      <div class="stat-row"><span class="stat-label">SSR/CSR Tutarlılık</span><span class="stat-value">${rendering.similarityScore != null ? rendering.similarityScore+'%' : '—'} ${rendering.renderDifference ? '⚠️' : '✅'}</span></div>
+      <div class="stat-row"><span class="stat-label">Unused JS</span><span class="stat-value">${p.unusedJsPercent != null ? p.unusedJsPercent+'%' : '—'}</span></div>
+      <div class="stat-row"><span class="stat-label">SSR/CSR Farkı</span><span class="stat-value">${rendering.similarityScore != null ? rendering.similarityScore+'%' : '—'} ${rendering.renderDifference ? '⚠️' : '✅'}</span></div>
     </div>`;
   }
 
@@ -1053,13 +1193,13 @@
     const l = r.links || {};
     return `<div class="detail-panel">
       <div class="panel-title">🔗 Link Analizi</div>
-      <div class="stat-row"><span class="stat-label">İç Linkler</span><span class="stat-value">${l.totalInternalLinks||0}</span></div>
-      <div class="stat-row"><span class="stat-label">Dış Linkler</span><span class="stat-value">${l.totalExternalLinks||0}</span></div>
-      <div class="stat-row"><span class="stat-label">Href Eksik</span><span class="stat-value">${badge(l.linksWithoutHref||0, 0, 5)}</span></div>
+      <div class="stat-row"><span class="stat-label">İç / Dış Linkler</span><span class="stat-value">${l.totalInternalLinks||0} / ${l.totalExternalLinks||0}</span></div>
+      <div class="stat-row"><span class="stat-label">Href Eksik / Orphan (#)</span><span class="stat-value">${badge(l.linksWithoutHref||0, 0, 5)} / ${badge(l.orphanAnchors||0, 0, 10)}</span></div>
       <div class="stat-row"><span class="stat-label">target="_blank" (rel eksik)</span><span class="stat-value">${badge(l.linksWithoutRel||0, 0, 3)}</span></div>
+      <div class="stat-row"><span class="stat-label">Pagination (Next/Prev)</span><span class="stat-value"><span class="tag">${l.relNext?'Var':'Yok'}</span> <span class="tag">${l.relPrev?'Var':'Yok'}</span></span></div>
+      <div class="stat-row"><span class="stat-label">Infinite Scroll Verisi</span><span class="stat-value">${l.hasInfiniteScroll ? '✅ Tespit Edildi' : '❌ Yok'}</span></div>
       <div class="stat-row"><span class="stat-label">Hreflang</span><span class="stat-value">${(l.hreflangTags||[]).length > 0 ? (l.hreflangTags||[]).map(t=>`<span class="tag">${t.lang}</span>`).join('') : '—'}</span></div>
-      <div class="stat-row"><span class="stat-label">ARIA Label Eksik</span><span class="stat-value">${badge(l.missingAriaLabels||0, 5, 20)}</span></div>
-      <div class="stat-row"><span class="stat-label">Küçük Tap Target</span><span class="stat-value">${badge(l.smallTapTargets||0, 10, 30)}</span></div>
+      <div class="stat-row"><span class="stat-label">ARIA Label / Tab Order Hataları</span><span class="stat-value">${badge(l.missingAriaLabels||0, 5, 20)} / ${badge(l.tabOrderIssues||0, 0, 5)}</span></div>
     </div>`;
   }
 

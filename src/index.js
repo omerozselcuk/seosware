@@ -24,8 +24,14 @@ async function runAudit(url, config = {}) {
       jsErrors: [],
       consoleLogs: [],
       brokenResourceUrls: [],
-      mixedContent: [],
-      hydrationErrors: []
+      hydrationErrors: [],
+      largeFiles: []
+    },
+    security: {
+      isHttps: false,
+      hsts: false,
+      xFrameOptions: null,
+      mixedContent: []
     },
     meta: null,
     content: null,
@@ -62,8 +68,17 @@ async function runAudit(url, config = {}) {
     page.on("response", async (response) => {
       const reqUrl = response.url();
       if (url.startsWith("https") && reqUrl.startsWith("http://")) {
-        result.network.mixedContent.push(reqUrl);
+        result.security.mixedContent.push(reqUrl);
       }
+      
+      try {
+        const headers = response.headers();
+        const contentLength = parseInt(headers['content-length'] || "0", 10);
+        // Track files larger than 1MB
+        if (contentLength > 1024 * 1024) {
+          result.network.largeFiles.push({ url: reqUrl, size: contentLength });
+        }
+      } catch(e) {}
     });
 
     // 1. Robots.txt Check (Optional optimization: cache it if checking multiple URLs)
@@ -82,6 +97,14 @@ async function runAudit(url, config = {}) {
     result.status = response?.status();
     result.finalUrl = page.url();
     result.redirected = url.replace(/\/$/, "") !== result.finalUrl.replace(/\/$/, "");
+
+    // Extract security headers from the main response
+    if (response) {
+      const headers = response.headers();
+      result.security.isHttps = result.finalUrl.startsWith("https://");
+      result.security.hsts = !!headers['strict-transport-security'];
+      result.security.xFrameOptions = headers['x-frame-options'] || null;
+    }
 
     // 3. Auditors execution
     // Note: Rendering requires separate raw page, so we pass current rendered html

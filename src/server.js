@@ -1,16 +1,16 @@
 const express = require('express');
 const path = require('path');
 const { runAudit } = require('./index');
-
+const { runSiteAudit } = require('./crawler');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
 app.use(express.static(path.join(__dirname, '..', 'dashboard')));
 
-// Store active audit state
 let auditState = {
   running: false,
+  cancelled: false,
   results: [],
   progress: { current: 0, total: 0, url: '', phase: '' }
 };
@@ -51,6 +51,7 @@ app.post('/api/audit', async (req, res) => {
   }
 
   auditState.running = true;
+  auditState.cancelled = false;
   auditState.results = [];
   auditState.progress = { current: 0, total: urls.length, url: '', phase: 'starting' };
 
@@ -59,6 +60,11 @@ app.post('/api/audit', async (req, res) => {
   // Run audits asynchronously
   (async () => {
     for (let i = 0; i < urls.length; i++) {
+      if (auditState.cancelled) {
+        broadcast('log', { message: '[\u26A0\ufe0f] Audit kullanıcı tarafından iptal edildi.', url: 'İptal Edildi' });
+        break;
+      }
+      
       let url = urls[i].trim();
       if (!url) continue;
       if (!url.startsWith('http://') && !url.startsWith('https://')) {
@@ -92,6 +98,73 @@ app.post('/api/audit', async (req, res) => {
     auditState.progress.phase = 'completed';
     broadcast('completed', { total: auditState.results.length });
   })();
+});
+
+// Start site-wide audit
+app.post('/api/site-audit', async (req, res) => {
+  const { url, maxPages, maxDepth } = req.body;
+
+  if (!url) {
+    return res.status(400).json({ error: 'URL gerekli' });
+  }
+
+  if (auditState.running) {
+    return res.status(409).json({ error: 'Bir audit zaten çalışıyor' });
+  }
+
+  auditState.running = true;
+  auditState.cancelled = false;
+  auditState.results = [];
+  auditState.progress = { current: 0, total: 1, url, phase: 'starting' };
+
+  res.json({ status: 'started' });
+
+  // Run async
+  (async () => {
+    let cleanUrl = url.trim();
+    if (!cleanUrl.startsWith('http://') && !cleanUrl.startsWith('https://')) {
+      cleanUrl = 'https://' + cleanUrl;
+    }
+
+    try {
+      const origLog = console.log;
+      console.log = (...args) => {
+        origLog(...args);
+        const msg = args.join(' ');
+        broadcast('log', { message: msg, url: cleanUrl });
+      };
+
+      const result = await runSiteAudit(cleanUrl, maxPages || 20, maxDepth || 3, { 
+        isCancelled: () => auditState.cancelled 
+      });
+      auditState.results = [{
+        url: cleanUrl,
+        type: 'site-audit',
+        timestamp: new Date().toISOString(),
+        siteAudit: result
+      }];
+      broadcast('result', { index: 0, result: auditState.results[0] });
+
+      console.log = origLog;
+    } catch (err) {
+      auditState.results = [{ url: cleanUrl, type: 'site-audit', error: err.message }];
+      broadcast('result', { index: 0, result: auditState.results[0] });
+    }
+
+    auditState.running = false;
+    auditState.progress.phase = 'completed';
+    broadcast('completed', { total: 1 });
+  })();
+});
+
+// Cancel active audit
+app.post('/api/cancel', (req, res) => {
+  if (auditState.running) {
+    auditState.cancelled = true;
+    res.json({ status: 'cancelling' });
+  } else {
+    res.json({ status: 'not_running' });
+  }
 });
 
 // Get current state

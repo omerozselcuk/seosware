@@ -7,6 +7,8 @@ async function auditPerformance(page) {
     longTasks: [],
     renderBlockingResources: [],
     unusedCssPercent: null,
+    unusedJsPercent: null,
+    inp: null,
   };
 
   // CWV
@@ -75,21 +77,62 @@ async function auditPerformance(page) {
     });
   } catch (e) {}
 
-  // Unused CSS
-  try {
-    const cdp = await page.context().newCDPSession(page);
-    await cdp.send("DOM.enable");
-    await cdp.send("CSS.enable");
-    await cdp.send("CSS.startRuleUsageTracking");
-    await page.waitForTimeout(500); // Wait a bit
-    const cssCoverage = await cdp.send("CSS.stopRuleUsageTracking");
-    if (cssCoverage.ruleUsage && cssCoverage.ruleUsage.length > 0) {
-      const usedRules = cssCoverage.ruleUsage.filter((r) => r.used).length;
-      const totalRules = cssCoverage.ruleUsage.length;
-      result.unusedCssPercent = Math.round(((totalRules - usedRules) / totalRules) * 100);
+    // Unused CSS
+    try {
+      await page.coverage.startCSSCoverage();
+      await page.coverage.startJSCoverage();
+
+      // Trigger a click to measure INP
+      const observerPromise = page.evaluate(() => {
+        return new Promise((resolve) => {
+          let inp = 0;
+          const observer = new PerformanceObserver((list) => {
+            const entries = list.getEntries();
+            for (const entry of entries) {
+              if (entry.interactionId) {
+                // INP is the max interaction duration
+                inp = Math.max(inp, entry.duration);
+              }
+            }
+          });
+          observer.observe({ type: "event", durationThreshold: 16, buffered: true });
+          setTimeout(() => {
+            observer.disconnect();
+            resolve(Math.round(inp));
+          }, 1000);
+        });
+      });
+
+      // Click center of the page
+      await page.mouse.click(500, 500);
+      result.inp = await observerPromise;
+
+      const cssCoverage = await page.coverage.stopCSSCoverage();
+      const jsCoverage = await page.coverage.stopJSCoverage();
+
+      // Calc unused CSS
+      let totalCss = 0, usedCss = 0;
+      for (const entry of cssCoverage) {
+        totalCss += entry.text.length;
+        for (const range of entry.ranges) {
+          usedCss += range.end - range.start;
+        }
+      }
+      if (totalCss > 0) result.unusedCssPercent = Math.round(((totalCss - usedCss) / totalCss) * 100);
+
+      // Calc unused JS
+      let totalJs = 0, usedJs = 0;
+      for (const entry of jsCoverage) {
+        totalJs += entry.text.length;
+        for (const range of entry.ranges) {
+          usedJs += range.end - range.start;
+        }
+      }
+      if (totalJs > 0) result.unusedJsPercent = Math.round(((totalJs - usedJs) / totalJs) * 100);
+
+    } catch (e) {
+      console.error("[Performance] Coverage/INP Error:", e.message);
     }
-    await cdp.detach();
-  } catch (e) {}
 
   return result;
 }

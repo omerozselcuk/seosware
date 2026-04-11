@@ -1,7 +1,7 @@
 {
   "name": "seosware",
-  "version": "2.0.0",
-  "description": "Seosware Pro: Playwright-based SEO Auditor with Gemini AI Insights and History Engine",
+  "version": "2.1.0",
+  "description": "Seosware Pro: Playwright-based SEO Auditor with Holistic Gemini AI Insights",
   "main": "index.js",
   "scripts": {
     "start": "node index.js",

@@ -6,49 +6,88 @@ async function generateInsight(historyData) {
     throw new Error('GEMINI_API_KEY bulunamadı. Lütfen .env dosyanıza ekleyin.');
   }
 
-  // Optimize payload to save tokens
+  // Optimize payload to save tokens while providing holistic context
   const optimizedData = historyData.results.map(r => ({
     url: r.url,
     status: r.status,
-    titleLen: r.meta?.titleLength,
-    descLen: r.meta?.metaDescriptionLength,
-    canonicalMatch: r.meta?.canonicalMatch,
-    ogImage: !!r.meta?.ogImage,
-    h1: r.content?.h1,
-    lcp: r.performance?.lcp,
-    cls: r.performance?.cls,
-    longTasks: (r.performance?.longTasks || []).length,
-    unusedCss: r.performance?.unusedCssPercent,
-    unusedJs: r.performance?.unusedJsPercent,
-    inp: r.performance?.inp,
-    renderBlocking: (r.performance?.renderBlockingResources || []).length,
-    soft404: r.status === 200 && r.content?.wordCount < 100 && r.content?.h1?.some(h=>h.includes('404')),
-    relNoopenerMissing: r.links?.linksWithoutRel,
-    aiGrade: r.aiSearch?.totalScore
+    redirected: r.redirected,
+    meta: {
+      title: r.meta?.title,
+      titleLen: r.meta?.titleLength,
+      descLen: r.meta?.metaDescriptionLength,
+      canonicalMatch: r.meta?.canonicalMatch,
+      robots: r.meta?.robots,
+      social: { og: !!r.meta?.ogImage, twitter: !!r.meta?.twitterCard }
+    },
+    content: {
+      h1: r.content?.h1,
+      wordCount: r.content?.wordCount,
+      jsonLd: (r.content?.jsonLdSchemas || []).length,
+      jsonLdErrors: (r.content?.jsonLdErrors || []).length,
+      soft404: r.status === 200 && r.content?.wordCount < 100 && (r.content?.h1 || []).some(h=>h.includes('404'))
+    },
+    links: {
+      internal: r.links?.totalInternalLinks,
+      external: r.links?.totalExternalLinks,
+      broken: (r.network?.brokenResourceUrls || []).length,
+      ariaMissing: r.links?.missingAriaLabels,
+      pagination: { next: !!r.links?.relNext, prev: !!r.links?.relPrev },
+      infiniteScroll: r.links?.hasInfiniteScroll
+    },
+    performance: {
+      lcp: r.performance?.lcp,
+      cls: r.performance?.cls,
+      inp: r.performance?.inp,
+      unusedCss: r.performance?.unusedCssPercent,
+      unusedJs: r.performance?.unusedJsPercent,
+      renderBlocking: (r.performance?.renderBlockingResources || []).length,
+      longTasks: (r.performance?.longTasks || []).length
+    },
+    quality: {
+      jsErrors: (r.network?.jsErrors || []).length,
+      consoleErrors: (r.network?.consoleLogs || []).filter(l=>l.type==='error').length,
+      hydrationErrors: (r.network?.hydrationErrors || []).length,
+      similarity: r.rendering?.similarityScore
+    },
+    aiReadiness: {
+      totalScore: r.aiSearch?.totalScore,
+      llmsTxt: !!r.aiSearch?.llmsTxt?.exists,
+      botBlocking: r.aiSearch?.botBlocking?.isBlocked
+    },
+    security: {
+      https: r.security?.isHttps,
+      hsts: r.security?.hsts,
+      mixedContent: (r.security?.mixedContent || []).length
+    }
   }));
 
   const prompt = `
-You are an expert Technical SEO and Performance Optimization Consultant.
-Analyze the following raw crawler data from a website and generate a detailed report IN TURKISH.
-Focus heavily on Page Speed improvements, Core Web Vitals (LCP, CLS, INP, unused JS/CSS, render blocking) and Technical SEO (Canonicals, Soft 404s, Meta tags).
+You are an expert Senior SEO & Performance Consultant.
+Analyze the following deep crawler dataset for multiple pages of a website and generate a HOLISTIC Technical SEO Audit IN TURKISH.
 
-Return the exact response as formatted HTML (without \`\`\`html tags, just raw HTML elements). Do NOT include html/head/body tags. Only the inner HTML markup.
-Use minimalist and modern inline styles (e.g. styling tables with border-collapse and padding). Return visually appealing output.
-Do NOT use markdown. Write pure HTML.
+The report should NOT be limited to speed. It must cover Meta, Content, Links, Quality, Security, and AI Search Readiness.
+
+Return the exact response as formatted HTML (without \`\`\`html tags, just raw HTML elements). Do NOT include html/head/body tags.
+Use a modern executive style with inline CSS for padding, border-collapse, and subtle colors.
 
 Section 1: <h2>1. Yönetici Özeti</h2> (Executive Summary)
-Explain what was scanned, the major technical deficiencies, and the biggest risks.
+Summary of the site's overall state. Mention how many pages were scanned and the general "health score".
 
-Section 2: <h2>2. Kritik Bulgular</h2> (Critical Findings)
-Discuss the biggest issues found in the data (e.g. Missing canonicals, broken H1s, soft 404s, slow pages).
-Highlight the exact slow pages and their LCP / INP values.
+Section 2: <h2>2. Teknik Donanım ve Meta Analizi</h2> (Technical & Meta)
+Analyze Title/Description lengths, Canonical mismatches, Robots.txt blockers, and Social tag coverage.
 
-Section 3: <h2>3. Page Speed Derin Analizi</h2> (Deep Speed Insight)
-Provide a table or specific breakdown of the slowest pages. Correlate slow LCP with "Render Blocking Resources", "Unused JS" and "Unused CSS". Give specific actionable steps based on what you see.
+Section 3: <h2>3. İçerik ve Semantik Yapı</h2> (Content & Semantic)
+Audit H1 usage, word counts, and JSON-LD structured data presence/errors. Identify any "Soft 404" risks.
 
-Section 4: <h2>4. Aksiyon Planı</h2> (Action Plan)
-Provide a prioritized HTML table (P0 Acil, P1 Yüksek, P2 Orta).
-Columns: #, Sorun (Issue), Aksiyon (Action), Öncelik (Priority).
+Section 4: <h2>4. Sayfa Hızı ve Core Web Vitals</h2> (Core Web Vitals)
+Identify the slowest pages and provide specific insights on LCP, CLS, and INP metrics based on render-blocking and unused code data.
+
+Section 5: <h2>5. Projeksiyon & AI Readiness</h2> (AI & LLM Readiness)
+Analyze the site's readiness for AI Search (llms.txt, bot blocking, grades).
+
+Section 6: <h2>6. Tam Öncelikli Aksiyon Planı</h2> (Holistic Action Plan)
+Provide a prioritized HTML table (P0 Acil, P1 Yüksek, P2 Orta, P3 Düşük).
+Columns: #, Kategori (Category), Sorun (Issue), Aksiyon (Action), Etki (Impact).
 
 Raw Audit Data:
 ${JSON.stringify(optimizedData, null, 2)}

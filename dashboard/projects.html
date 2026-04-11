@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <title>Projeler & Geçmiş — Seosware</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    /* Reuse core styles and add specific ones for Projects */
+    :root {
+      --bg: #0a0e1a; var(--bg);
+      --bg-card: rgba(20, 25, 40, 0.6);
+      --bg-glass: rgba(20, 25, 40, 0.4);
+      --border: rgba(255, 255, 255, 0.08);
+      --border-hover: rgba(99, 102, 241, 0.4);
+      --accent: #6366f1;
+      --text-primary: #f8fafc;
+      --text-secondary: #cbd5e1;
+      --text-muted: #64748b;
+      --radius: 16px;
+      --green: #34d399; var(--green);
+      --red: #f87171;
+      --font: 'Inter', sans-serif;
+    }
+    
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: var(--font); background-color: var(--bg); color: var(--text-primary); line-height: 1.5; min-height: 100vh; position: relative; overflow-x: hidden; }
+    
+    .header { padding: 20px 40px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); background: rgba(10,14,26,0.8); backdrop-filter: blur(20px); position: sticky; top: 0; z-index: 100; }
+    .logo { display: flex; align-items: center; gap: 12px; text-decoration: none; }
+    .logo-icon { width: 32px; height: 32px; background: linear-gradient(135deg, var(--accent), #a855f7); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: 800; color: white; }
+    .logo-text { font-size: 18px; font-weight: 700; color: white; }
+    
+    .nav-links { display: flex; gap: 20px; }
+    .nav-link { color: var(--text-muted); text-decoration: none; font-size: 14px; font-weight: 500; transition: color 0.2s; }
+    .nav-link:hover, .nav-link.active { color: white; }
+    
+    .container { max-width: 1200px; margin: 0 auto; padding: 40px; }
+    
+    .btn { padding: 10px 20px; border-radius: 8px; border: none; font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+    .btn-primary { background: linear-gradient(135deg, var(--accent), #7c3aed); color: white; }
+    .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text-secondary); }
+    .btn-danger { background: transparent; border: 1px solid rgba(248,113,113,0.3); color: var(--red); }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    
+    /* Project List */
+    .project-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; margin-top: 24px; }
+    .card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; transition: border-color 0.3s; cursor: pointer; }
+    .card:hover { border-color: var(--border-hover); }
+    .card h3 { margin-bottom: 8px; }
+    .card p { color: var(--text-muted); font-size: 13px; margin-bottom: 16px; }
+    
+    /* New Project Form */
+    .form-group { margin-bottom: 20px; }
+    .form-group label { display: block; margin-bottom: 8px; font-size: 14px; color: var(--text-secondary); }
+    .form-group input, .form-group textarea { width: 100%; background: rgba(0,0,0,0.3); border: 1px solid var(--border); padding: 12px; color: white; border-radius: 8px; font-family: var(--font); }
+    .form-group textarea { min-height: 150px; font-family: monospace; font-size: 13px; }
+    
+    /* Active Project View */
+    .project-header { margin-bottom: 40px; display: flex; justify-content: space-between; align-items: flex-end; }
+    .history-table { width: 100%; border-collapse: collapse; margin-top: 20px; text-align: left; }
+    .history-table th { padding: 12px; border-bottom: 1px solid var(--border); color: var(--text-muted); font-weight: 500; font-size: 13px; }
+    .history-table td { padding: 16px 12px; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 14px; }
+    
+    /* Delta View */
+    .delta-list { display: flex; flex-direction: column; gap: 12px; margin-top: 20px; }
+    .delta-item { background: rgba(0,0,0,0.2); padding: 16px; border: 1px solid var(--border); border-radius: 8px; border-left: 4px solid var(--border); }
+    .delta-item.critical { border-left-color: var(--red); }
+    .delta-item.warning { border-left-color: #f59e0b; }
+    .delta-item.info { border-left-color: var(--accent); }
+    .delta-item.improvement { border-left-color: var(--green); }
+    .change-row { display: flex; justify-content: space-between; font-size: 13px; padding: 4px 0; border-bottom: 1px dashed rgba(255,255,255,0.05); }
+    .change-bad { color: var(--red); }
+    .change-good { color: var(--green); }
+    
+    #app { display: none; }
+    .active-view { display: block !important; }
+  </style>
+</head>
+<body>
+
+<header class="header">
+  <a href="index.html" class="logo">
+    <div class="logo-icon">S</div>
+    <div class="logo-text">Seosware</div>
+  </a>
+  <div class="nav-links">
+    <a href="index.html" class="nav-link">Ad-Hoc Taramalar</a>
+    <a href="projects.html" class="nav-link active">Projeler & Geçmiş</a>
+  </div>
+</header>
+
+<div class="container">
+  
+  <!-- VIEW 1: Project List -->
+  <div id="view-list" class="active-view">
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+      <h2>Kayıtlı Projeler</h2>
+      <button class="btn btn-primary" onclick="showForm()">+ Yeni Proje</button>
+    </div>
+    <div class="project-grid" id="projectsGrid">Yükleniyor...</div>
+  </div>
+
+  <!-- VIEW 2: New Project Form -->
+  <div id="view-form" style="display:none;">
+    <h2>Yeni Proje Oluştur</h2>
+    <p style="color:var(--text-muted); margin-bottom: 24px;">Düzenli taranacak 50 veya daha fazla URL'yi listeleyin.</p>
+    <div class="form-group">
+      <label>Proje Adı</label>
+      <input type="text" id="pName" placeholder="Örn: E-Ticaret Ana Kategori Sayfaları">
+    </div>
+    <div class="form-group">
+      <label>URL Listesi (Her satıra bir tane)</label>
+      <textarea id="pUrls" placeholder="https://example.com/&#10;https://example.com/hakkinda"></textarea>
+    </div>
+    <div style="display:flex; gap:16px;">
+      <button class="btn btn-primary" onclick="saveProject()">Kaydet</button>
+      <button class="btn btn-outline" onclick="loadProjects()">İptal</button>
+    </div>
+  </div>
+
+  <!-- VIEW 3: Active Project & History -->
+  <div id="view-project" style="display:none;">
+    <button class="btn btn-outline" style="margin-bottom:20px; padding:6px 12px;" onclick="loadProjects()">← Geri</button>
+    
+    <div class="project-header">
+      <div>
+        <h2 id="activeProjectName">Proje Adı</h2>
+        <p style="color:var(--text-muted);" id="activeProjectUrlsCount">0 URL yönetiliyor</p>
+      </div>
+      <div style="display:flex; gap:12px; align-items:center;">
+        <button class="btn btn-danger" onclick="deleteActiveProject()">Sil</button>
+        <button class="btn btn-primary" onclick="runProject()" id="runProjectBtn">▶️ Çalıştır & Kaydet</button>
+      </div>
+    </div>
+
+    <!-- Active Run Status -->
+    <div id="runStatus" style="display:none; background:var(--bg-card); padding:20px; border-radius:12px; margin-bottom:20px;">
+      <h3 style="margin-bottom:8px;">Tarama Devam Ediyor...</h3>
+      <div style="width:100%; height:4px; background:rgba(255,255,255,0.1); border-radius:2px; margin-bottom:12px;">
+        <div id="runProgress" style="width:0%; height:100%; background:var(--accent); transition:width 0.3s;"></div>
+      </div>
+      <p id="runLog" style="font-family:monospace; font-size:12px; color:var(--text-muted);"></p>
+    </div>
+
+    <!-- History & Delta -->
+    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:40px;">
+      <div>
+        <h3>Geçmiş Raporlar</h3>
+        <table class="history-table">
+          <thead>
+            <tr>
+              <th></th>
+              <th>Tarih</th>
+              <th>Tarandı</th>
+            </tr>
+          </thead>
+          <tbody id="historyBody"></tbody>
+        </table>
+        <button class="btn btn-outline" style="margin-top:16px; width:100%;" onclick="compareSelected()">🔍 Seçilenleri Kıyasla (Delta)</button>
+      </div>
+      
+      <div>
+        <h3>Delta (Değişim) Sonucu</h3>
+        <p style="font-size:13px; color:var(--text-muted);">İki geçmiş raporu seçip kıyasladığınızda değişimler burada görünür.</p>
+        <div id="deltaResults" class="delta-list"></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script src="projects.js"></script>
+</body>
+</html>

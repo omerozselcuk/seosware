@@ -21,7 +21,15 @@ Seosware crawls your pages with a real Chromium browser, extracts 100+ SEO signa
 
 ### 🤖 AI Search Readiness
 - **`/llms.txt` & `/llms-full.txt`** — Existence and spec compliance (H1, blockquote, markdown format)
-- **AI Bot Blocking** — Checks robots.txt for GPTBot, ClaudeBot, PerplexityBot, Google-Extended, ChatGPT-User
+- **Bot Blocking Check** — Validates if ClaudeBot, GPTBot, or CCBot are blocked by `robots.txt` or headers
+- **Readability Grade** — Overall letter grade (A+ to F) for AI accessibility
+
+### 📈 History & Delta Engine (v1.2)
+- **Project Batches** — Save named lists of URLs (Projects) and run them continuously.
+- **History Tracking** — Saves all previous run snapshots locally to JSON in `data/history/[project_id]`.
+- **Delta Analysis** — Compares any two historical snapshots to find regressions and improvements.
+
+### 🤖 AI Search Readiness Metrics
 - **Citability Score** — Definition sentences, question headings, statistics, publish dates, structured content
 - **E-E-A-T Signals** — Author info, about/contact pages, organization schema, trust pages, social profiles
 - **Schema Depth** — FAQPage, HowTo, Article, Product schema field completeness analysis

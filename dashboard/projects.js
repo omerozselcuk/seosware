@@ -86,13 +86,16 @@ async function loadHistory(id) {
     historyList = await res.json();
     
     if(historyList.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="3">Hiç geçmiş tarama yok.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="4">Hiç geçmiş tarama yok.</td></tr>';
     } else {
       tbody.innerHTML = historyList.map(h => `
         <tr>
           <td><input type="checkbox" class="hist-check" value="${h.id}"></td>
           <td>${new Date(h.timestamp).toLocaleString()}</td>
           <td>${h.totalUrls} Sayfa</td>
+          <td>
+            <button class="btn btn-outline" style="padding: 4px 8px; font-size: 11px;" onclick="openAiInsight('${h.id}')">🤖 AI Analiz</button>
+          </td>
         </tr>
       `).join('');
     }
@@ -199,6 +202,41 @@ async function runProject() {
   } catch(e) {
     btn.disabled = false;
   }
+}
+
+// ─── AI INSIGHTS ───
+async function openAiInsight(runId) {
+  const modal = document.getElementById('aiModal');
+  const loading = document.getElementById('aiLoading');
+  const reportBox = document.getElementById('aiReportBox');
+  
+  modal.classList.add('open');
+  loading.style.display = 'block';
+  reportBox.innerHTML = '';
+  
+  try {
+    const res = await fetch(`/api/projects/${activeProjectId}/history/${runId}/insight`, {
+      method: 'POST'
+    });
+    const data = await res.json();
+    
+    loading.style.display = 'none';
+    if (data.error) {
+      reportBox.innerHTML = `<div style="color:var(--red); padding:20px; border:1px solid var(--red); border-radius:8px;">
+        <h3>⚠️ Hata</h3>
+        <p>${data.error}</p>
+      </div>`;
+    } else {
+      reportBox.innerHTML = data.html;
+    }
+  } catch (e) {
+    loading.style.display = 'none';
+    reportBox.innerHTML = 'Bir hata oluştu.';
+  }
+}
+
+function closeAiModal() {
+  document.getElementById('aiModal').classList.remove('open');
 }
 
 // Init

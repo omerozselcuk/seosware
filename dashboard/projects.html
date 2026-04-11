@@ -73,6 +73,23 @@
     .change-bad { color: var(--red); }
     .change-good { color: var(--green); }
     
+    
+    /* Modal */
+    .modal-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.8); backdrop-filter: blur(5px); display: flex; align-items: center; justify-content: center; z-index: 1000; opacity: 0; pointer-events: none; transition: opacity 0.3s; }
+    .modal-overlay.open { opacity: 1; pointer-events: all; }
+    .modal-content { background: var(--bg); border: 1px solid var(--border); width: 90%; max-width: 900px; max-height: 85vh; border-radius: 12px; overflow-y: auto; position: relative; padding: 40px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5); }
+    .modal-close { position: absolute; top: 20px; right: 20px; background: rgba(255,255,255,0.1); border: none; color: white; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; font-weight: bold; }
+    .modal-close:hover { background: rgba(255,255,255,0.2); }
+    
+    /* AI Report Styles */
+    .ai-report h2 { color: var(--accent); margin-top: 32px; margin-bottom: 16px; font-size: 20px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 8px; }
+    .ai-report h2:first-child { margin-top: 0; }
+    .ai-report p { margin-bottom: 16px; color: var(--text-secondary); }
+    .ai-report table { width: 100%; border-collapse: collapse; margin-bottom: 24px; font-size: 14px; }
+    .ai-report th { text-align: left; padding: 12px; background: rgba(255,255,255,0.05); color: var(--text-muted); border-bottom: 1px solid var(--border); }
+    .ai-report td { padding: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+    .ai-report tr:hover td { background: rgba(255,255,255,0.02); }
+    
     #app { display: none; }
     .active-view { display: block !important; }
   </style>
@@ -153,6 +170,7 @@
               <th></th>
               <th>Tarih</th>
               <th>Tarandı</th>
+              <th>İşlem</th>
             </tr>
           </thead>
           <tbody id="historyBody"></tbody>
@@ -168,6 +186,26 @@
     </div>
   </div>
 
+</div>
+
+<!-- AI Insight Modal -->
+<div class="modal-overlay" id="aiModal">
+  <div class="modal-content">
+    <button class="modal-close" onclick="closeAiModal()">×</button>
+    <div style="display:flex; align-items:center; gap: 12px; margin-bottom:24px;">
+      <div style="font-size:32px;">✨</div>
+      <div>
+        <h2 style="margin:0;">Yapay Zeka Teknik Denetim Raporu</h2>
+        <p style="color:var(--text-muted); margin:0; font-size:14px;">Gemini tarafindan analiz ediliyor...</p>
+      </div>
+    </div>
+    <div id="aiLoading" style="display:none; text-align:center; padding: 40px;">
+      <div style="font-size:40px; animation: pulse 1.5s infinite;">🤖</div>
+      <p style="margin-top:16px; color:var(--text-muted);">Sitenizin audit verileri Gemini'a gönderildi. Gelişmiş Speed Insights raporu hazırlanıyor. Bu işlem 10-20 saniye sürebilir...</p>
+      <style>@keyframes pulse { 0% { transform: scale(1); opacity: 0.8; } 50% { transform: scale(1.2); opacity: 1; } 100% { transform: scale(1); opacity: 0.8; } }</style>
+    </div>
+    <div id="aiReportBox" class="ai-report"></div>
+  </div>
 </div>
 
 <script src="projects.js"></script>

@@ -4,6 +4,7 @@ const { runAudit } = require('./index');
 const { runSiteAudit } = require('./crawler');
 const storage = require('./utils/storage');
 const { compareRuns } = require('./utils/delta');
+const { generateInsight } = require('./utils/ai-insights');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -192,6 +193,23 @@ app.get('/api/projects/:id/delta', async (req, res) => {
   
   const deltas = compareRuns(hA.results, hB.results);
   res.json(deltas);
+});
+
+app.post('/api/projects/:id/history/:runId/insight', async (req, res) => {
+  try {
+    const historyData = await storage.getHistoryItem(req.params.id, req.params.runId);
+    if (!historyData) return res.status(404).json({error: "History not found"});
+    
+    // Check if API key is provided
+    if (!process.env.GEMINI_API_KEY) {
+      return res.status(400).json({ error: "Missing API Key: Lütfen .env dosyasına GEMINI_API_KEY ekleyin." });
+    }
+    
+    const htmlReport = await generateInsight(historyData);
+    res.json({ html: htmlReport });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 app.post('/api/projects/:id/run', async (req, res) => {

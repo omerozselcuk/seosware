@@ -24,16 +24,16 @@ Seosware crawls your pages with a real Chromium browser, extracts 100+ SEO signa
 - **Bot Blocking Check** — Validates if ClaudeBot, GPTBot, or CCBot are blocked by `robots.txt` or headers
 - **Readability Grade** — Overall letter grade (A+ to F) for AI accessibility
 
-### 📈 History & Delta Engine (v1.2)
+### 📈 History & Delta Engine
 - **Project Batches** — Save named lists of URLs (Projects) and run them continuously.
-- **History Tracking** — Saves all previous run snapshots locally to JSON in `data/history/[project_id]`.
-- **Delta Analysis** — Compares any two historical snapshots to find regressions and improvements.
+- **History Tracking** — Saves all previous run snapshots locally to JSON.
+- **Delta Analysis** — Compares any two historical snapshots to find regressions.
 
-### 🤖 AI Search Readiness Metrics
-- **Citability Score** — Definition sentences, question headings, statistics, publish dates, structured content
-- **E-E-A-T Signals** — Author info, about/contact pages, organization schema, trust pages, social profiles
-- **Schema Depth** — FAQPage, HowTo, Article, Product schema field completeness analysis
-- **Overall Grade** — Weighted score (A+ to F) across all AI readiness categories
+### ✨ Seosware Pro: AI Insight Engine (v2.0)
+- **Gemini 2.5 Integration** — Automated technical audit analysis via Google Gemini.
+- **Executive Summaries** — Human-readable high-level reports for stakeholders.
+- **Page Speed Action Plans** — Detailed, prioritized tasks (P0/P1) for LCP and INP optimization.
+- **Soft 404 & Content Analysis** — AI-powered detection of low-quality or error pages.
 
 ### 📊 Local Dashboard
 - Dark-mode glassmorphism UI

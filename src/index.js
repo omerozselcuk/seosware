@@ -1,0 +1,116 @@
+const { launchDesktopBrowser, WAIT_AFTER_LOAD } = require('./utils/browser');
+const { fetchSitemap, fetchRobotsTxt, isBlockedByRobots } = require('./utils/fetchers');
+const { auditMeta } = require('./auditors/meta');
+const { auditContent } = require('./auditors/content');
+const { auditImages } = require('./auditors/images');
+const { auditLinks } = require('./auditors/links');
+const { auditPerformance } = require('./auditors/performance');
+const { auditRendering } = require('./auditors/rendering');
+const { auditMobile } = require('./auditors/mobile');
+const { auditAISearch } = require('./auditors/ai-search-auditor');
+
+async function runAudit(url, config = {}) {
+  const TIMEOUT = config.timeout || 30000;
+  console.log(`\n[\u2139] Starting audit for: ${url}`);
+  
+  const result = {
+    url,
+    timestamp: new Date().toISOString(),
+    status: null,
+    redirected: false,
+    finalUrl: null,
+    loadTime: null,
+    network: {
+      jsErrors: [],
+      consoleLogs: [],
+      brokenResourceUrls: [],
+      mixedContent: [],
+      hydrationErrors: []
+    },
+    meta: null,
+    content: null,
+    images: null,
+    links: null,
+    performance: null,
+    rendering: null,
+    mobile: null,
+    aiSearch: null,
+    robots: { blocked: false }
+  };
+
+  try {
+    const { browser, context, page } = await launchDesktopBrowser(config);
+
+    // Network & Error listeners
+    page.on("pageerror", (err) => {
+      result.network.jsErrors.push(err.message);
+      if (err.message.toLowerCase().includes("hydrat") || err.message.toLowerCase().includes("mismatch")) {
+        result.network.hydrationErrors.push(err.message);
+      }
+    });
+
+    page.on("console", (msg) => {
+      if (msg.type() === "error" || msg.type() === "warning") {
+        result.network.consoleLogs.push({ type: msg.type(), text: msg.text() });
+      }
+    });
+
+    page.on("requestfailed", (req) => {
+      result.network.brokenResourceUrls.push({ url: req.url(), error: req.failure()?.errorText });
+    });
+
+    page.on("response", async (response) => {
+      const reqUrl = response.url();
+      if (url.startsWith("https") && reqUrl.startsWith("http://")) {
+        result.network.mixedContent.push(reqUrl);
+      }
+    });
+
+    // 1. Robots.txt Check (Optional optimization: cache it if checking multiple URLs)
+    try {
+      const parsedUrl = new URL(url);
+      const robotsTxtRules = await fetchRobotsTxt(page, `${parsedUrl.origin}/robots.txt`);
+      result.robots.blocked = isBlockedByRobots(url, robotsTxtRules);
+      result.robots.rules = robotsTxtRules;
+    } catch(e) {}
+
+    // 2. Load Page Setup
+    const startTime = Date.now();
+    const response = await page.goto(url, { waitUntil: "networkidle", timeout: TIMEOUT });
+    await page.waitForTimeout(WAIT_AFTER_LOAD);
+    result.loadTime = Date.now() - startTime;
+    result.status = response?.status();
+    result.finalUrl = page.url();
+    result.redirected = url.replace(/\/$/, "") !== result.finalUrl.replace(/\/$/, "");
+
+    // 3. Auditors execution
+    // Note: Rendering requires separate raw page, so we pass current rendered html
+    const renderedHtml = await page.content();
+    result.rendering = await auditRendering(page, renderedHtml, url, TIMEOUT);
+    result.meta = await auditMeta(page, result.finalUrl);
+    result.content = await auditContent(page);
+    result.images = await auditImages(page);
+    result.links = await auditLinks(page);
+    result.performance = await auditPerformance(page);
+
+    // 4. AI Search Audit
+    console.log(`[\u2139] Running AI Search audit for: ${url}`);
+    result.aiSearch = await auditAISearch(page, url, TIMEOUT);
+
+    await page.close();
+    await context.close();
+    await browser.close();
+
+    // 4. Mobile Execution
+    console.log(`[\u2139] Running mobile simulation for: ${url}`);
+    result.mobile = await auditMobile(url, TIMEOUT);
+
+  } catch (err) {
+    console.error(`[\u2717] Failed to audit ${url}: ${err.message}`);
+    result.error = err.message;
+  }
+
+  return result;
+}
+
+module.exports = { runAudit };

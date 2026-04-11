@@ -1,0 +1,546 @@
+const { chromium } = require("playwright");
+const fs = require("fs");
+
+// =====================================================
+// AYARLAR
+// =====================================================
+const URLS = [
+  // Kontrol etmek istediğin URL'leri buraya ekle
+  "https://tvplus.com.tr/dizi-izle/tur/dram--1110",
+  "https://tvplus.com.tr/dizi-izle/tur/bilim-kurgu--1106",
+  "https://tvplus.com.tr/dizi-izle/tur/belgesel--1105",
+  "https://tvplus.com.tr/dizi-izle/tur/animasyon--1104",
+  "https://tvplus.com.tr/dizi-izle/tur/turk-yapimi--2116",
+  "https://tvplus.com.tr/dizi-izle/tur/aksiyon--1103",
+  "https://tvplus.com.tr/dizi-izle/tur/spor--14908",
+  "https://tvplus.com.tr/dizi-izle/tur/aile--1102",
+  "https://tvplus.com.tr/dizi-izle/tur/cocuk--1108",
+  "https://tvplus.com.tr/dizi-izle/tur/korku--1120",
+  "https://tvplus.com.tr/dizi-izle/tur/gerilim--1116",
+  "https://tvplus.com.tr/dizi-izle/tur/fantastik--1114",
+  "https://tvplus.com.tr/dizi-izle/tur/komedi--1119",
+  "https://tvplus.com.tr/dizi-izle/tur/suc--16188",
+  "https://tvplus.com.tr/dizi-izle/tur/ask--1130",
+  "https://tvplus.com.tr/dizi-izle/tur/muzik--12628",
+  "https://tvplus.com.tr/dizi-izle/tur/romantik-komedi--1124",
+  "https://tvplus.com.tr/dizi-izle/tur/macera--1123",
+  "https://tvplus.com.tr/dizi-izle/tur/yasam--12629",
+  "https://tvplus.com.tr/dizi-izle/mariachis--224296406",
+  "https://tvplus.com.tr/dizi-izle/dream-stage--224469820",
+  "https://tvplus.com.tr/dizi-izle/blue-lights--222797254",
+  "https://tvplus.com.tr/dizi-izle/privileges--223722500",
+  "https://tvplus.com.tr/dizi-izle/this-town--223267230",
+  "https://tvplus.com.tr/dizi-izle/the-madison--223149722",
+  "https://tvplus.com.tr/dizi-izle/film-club--222872604",
+  "https://tvplus.com.tr/dizi-izle/goat-girl--222798895",
+  "https://tvplus.com.tr/dizi-izle/rooster--222757588",
+  "https://tvplus.com.tr/dizi-izle/womens-hell--222471356",
+  "https://tvplus.com.tr/dizi-izle/marshals--222339866",
+  "https://tvplus.com.tr/dizi-izle/vgly--222400602",
+  "https://tvplus.com.tr/dizi-izle/city-of-god-the-fight-rages-on--222413893",
+  "https://tvplus.com.tr/dizi-izle/caught--221997149",
+  "https://tvplus.com.tr/dizi-izle/evil--221944719",
+  "https://tvplus.com.tr/dizi-izle/banksters--221538434",
+  "https://tvplus.com.tr/dizi-izle/portobello--221766747",
+  "https://tvplus.com.tr/dizi-izle/a-murder-at-the-end-of-the-world--221821873",
+  "https://tvplus.com.tr/dizi-izle/like-water-for-chocolate--221472268",
+  "https://tvplus.com.tr/dizi-izle/neighbors--221597865",
+  "https://tvplus.com.tr/dizi-izle/this-is-luna--221396674",
+  "https://tvplus.com.tr/dizi-izle/i-love-you-and-it-hurts--221400995",
+  "https://tvplus.com.tr/dizi-izle/divided-youth--221396949",
+  "https://tvplus.com.tr/dizi-izle/rap-battlefield--221057701",
+  "https://tvplus.com.tr/dizi-izle/the-man-who-fell-to-earth--221176847",
+  "https://tvplus.com.tr/dizi-izle/let-the-right-one-in--220803728",
+  "https://tvplus.com.tr/dizi-izle/luther--220513751",
+  "https://tvplus.com.tr/dizi-izle/gangs-of-london--220153004",
+  "https://tvplus.com.tr/dizi-izle/the-office--219734225",
+  "https://tvplus.com.tr/dizi-izle/a-knight-of-the-seven-kingdoms--219843442",
+  "https://tvplus.com.tr/dizi-izle/escape-at-dannemora--219844426",
+  "https://tvplus.com.tr/dizi-izle/the-new-pope--219469350",
+  "https://tvplus.com.tr/dizi-izle/the-young-pope--219471212",
+  "https://tvplus.com.tr/dizi-izle/primal--219579277",
+  "https://tvplus.com.tr/dizi-izle/devil-in-disguise-john-wayne-gacy--218814501",
+  "https://tvplus.com.tr/dizi-izle/sherlock--218671232",
+  "https://tvplus.com.tr/dizi-izle/alf--218745277",
+  "https://tvplus.com.tr/dizi-izle/mavi-ay--218670959",
+  "https://tvplus.com.tr/dizi-izle/supernatural--217978409",
+  "https://tvplus.com.tr/dizi-izle/heaven--218143365",
+  "https://tvplus.com.tr/dizi-izle/talamasca-the-secret-order--216053933",
+  "https://tvplus.com.tr/dizi-izle/feride--216425714",
+  "https://tvplus.com.tr/dizi-izle/the-iris-affair--215498405",
+  "https://tvplus.com.tr/dizi-izle/wasteland--210962453",
+  "https://tvplus.com.tr/dizi-izle/tokyo-vice--212393140",
+  "https://tvplus.com.tr/dizi-izle/mare-of-easttown--212580504",
+  "https://tvplus.com.tr/dizi-izle/the-staircase--212670880",
+  "https://tvplus.com.tr/dizi-izle/five-days--212670965",
+  "https://tvplus.com.tr/dizi-izle/the-thaw--213108934",
+  "https://tvplus.com.tr/dizi-izle/we-own-this-city--211016297",
+  "https://tvplus.com.tr/dizi-izle/the-undoing--210553907",
+  "https://tvplus.com.tr/dizi-izle/big-little-lies--211677622",
+  "https://tvplus.com.tr/dizi-izle/the-night-of--213430239",
+  "https://tvplus.com.tr/dizi-izle/when-no-one-sees-us--213879270",
+  "https://tvplus.com.tr/dizi-izle/true-detective--210897407",
+  "https://tvplus.com.tr/dizi-izle/perry-mason--212457262",
+  "https://tvplus.com.tr/dizi-izle/cb-strike--213375430",
+  "https://tvplus.com.tr/dizi-izle/boardwalk-empire--211405298",
+  "https://tvplus.com.tr/dizi-izle/euphoria--211402691",
+  "https://tvplus.com.tr/dizi-izle/rage--214512361",
+  "https://tvplus.com.tr/dizi-izle/the-last-of-us--211622292",
+  "https://tvplus.com.tr/dizi-izle/the-pacific--213252832",
+  "https://tvplus.com.tr/dizi-izle/the-leftovers--212393019",
+  "https://tvplus.com.tr/dizi-izle/curb-your-enthusiasm--213917772",
+  "https://tvplus.com.tr/dizi-izle/veep--211410321",
+  "https://tvplus.com.tr/dizi-izle/in-treatment--210613928",
+  "https://tvplus.com.tr/dizi-izle/mildred-pierce--215114974",
+  "https://tvplus.com.tr/dizi-izle/divorce--214186129",
+  "https://tvplus.com.tr/dizi-izle/the-righteous-gemstones--212581568",
+  "https://tvplus.com.tr/dizi-izle/avenue-5--213369858",
+  "https://tvplus.com.tr/dizi-izle/the-comeback--212868354",
+  "https://tvplus.com.tr/dizi-izle/girls--212818020",
+  "https://tvplus.com.tr/dizi-izle/the-sopranos--210896579",
+  "https://tvplus.com.tr/dizi-izle/the-regime--212925210",
+  "https://tvplus.com.tr/dizi-izle/succession--211676095",
+  "https://tvplus.com.tr/dizi-izle/dune-prophecy--211524055",
+  "https://tvplus.com.tr/dizi-izle/the-answer--211071040",
+  "https://tvplus.com.tr/dizi-izle/karsunun-odasi--214889391",
+  "https://tvplus.com.tr/dizi-izle/seker-fareler--211132457",
+  "https://tvplus.com.tr/dizi-izle/operasyon--211018592",
+  "https://tvplus.com.tr/dizi-izle/liderlik-sirlari--211017987",
+  "https://tvplus.com.tr/dizi-izle/ganyan--211071184",
+  "https://tvplus.com.tr/dizi-izle/renkli-ruyalar-oteli--211070367",
+  "https://tvplus.com.tr/dizi-izle/tkusagi--212812262",
+  "https://tvplus.com.tr/dizi-izle/kakao-ve-sut--211071263",
+  "https://tvplus.com.tr/dizi-izle/tek-gecelik-yemekler--210901133",
+  "https://tvplus.com.tr/dizi-izle/oyun--212745343",
+  "https://tvplus.com.tr/dizi-izle/gurkan-sef-ile-ates-oyunlari--210899340",
+  "https://tvplus.com.tr/dizi-izle/gurkan-sef-ile-gorevimiz-mangal--210901120",
+  "https://tvplus.com.tr/dizi-izle/dugun--213182289",
+  "https://tvplus.com.tr/dizi-izle/samanin-yolunda--211071189",
+  "https://tvplus.com.tr/dizi-izle/canli-mutfak--210899646",
+  "https://tvplus.com.tr/dizi-izle/yesilcam--210961051",
+  "https://tvplus.com.tr/dizi-izle/hayaller-bizim-iki-gozum--211071405",
+  "https://tvplus.com.tr/dizi-izle/iki-balkon--213113030",
+  "https://tvplus.com.tr/dizi-izle/deprem--211138492",
+  "https://tvplus.com.tr/dizi-izle/40--210668013",
+  "https://tvplus.com.tr/dizi-izle/deneme-cekimi--211134247",
+  "https://tvplus.com.tr/dizi-izle/kafayi-yersin--210901343",
+  "https://tvplus.com.tr/dizi-izle/dovuscu--214440303",
+  "https://tvplus.com.tr/dizi-izle/acans--211015601",
+  "https://tvplus.com.tr/dizi-izle/benim-zurafam-ucabilir--211072660",
+  "https://tvplus.com.tr/dizi-izle/calinmis-hayatlar--211071328",
+  "https://tvplus.com.tr/dizi-izle/tadina-doyulmaz-sohbetler--211132458",
+  "https://tvplus.com.tr/dizi-izle/tadina-doyulmaz-sohbetler-sicilyada--211138383",
+  "https://tvplus.com.tr/dizi-izle/kukuli--210901634",
+  "https://tvplus.com.tr/dizi-izle/bize-gezmek-olsun--214244088",
+  "https://tvplus.com.tr/dizi-izle/masal-satosu-peri-hirsizi--211071053",
+  "https://tvplus.com.tr/dizi-izle/dun-dundur--211138415",
+  "https://tvplus.com.tr/dizi-izle/boom--211138373",
+  "https://tvplus.com.tr/dizi-izle/140journos-sikismislik--211071174",
+  "https://tvplus.com.tr/dizi-izle/sahipli--213106895",
+  "https://tvplus.com.tr/dizi-izle/yasamayanlar--211071142",
+  "https://tvplus.com.tr/dizi-izle/bartu-ben--211832545",
+  "https://tvplus.com.tr/dizi-izle/boru-2039--210961913",
+  "https://tvplus.com.tr/dizi-izle/altin-cocuk--211121749",
+  "https://tvplus.com.tr/dizi-izle/dudullu-postasi--210901036",
+  "https://tvplus.com.tr/dizi-izle/cimen-show--210899229",
+  "https://tvplus.com.tr/dizi-izle/sakli--211015270",
+  "https://tvplus.com.tr/dizi-izle/bozkir--210956465",
+  "https://tvplus.com.tr/dizi-izle/7yuz--210961756",
+  "https://tvplus.com.tr/dizi-izle/bizden-olur-mu--211014306",
+  "https://tvplus.com.tr/dizi-izle/kiyma--211138558",
+  "https://tvplus.com.tr/dizi-izle/sokagin-cocuklari--213183246",
+  "https://tvplus.com.tr/dizi-izle/dogu--212447140",
+  "https://tvplus.com.tr/dizi-izle/behzat-c-bir-ankara-polisiyesi--212668971",
+  "https://tvplus.com.tr/dizi-izle/sifir-bir--211015985",
+  "https://tvplus.com.tr/dizi-izle/magarsus--210901054",
+  "https://tvplus.com.tr/dizi-izle/and-just-like-that--210667964",
+  "https://tvplus.com.tr/dizi-izle/the-chair-company--214320356",
+  "https://tvplus.com.tr/dizi-izle/the-gilded-age--210711545",
+  "https://tvplus.com.tr/dizi-izle/the-handmaids-tale--211677431",
+  "https://tvplus.com.tr/dizi-izle/the-penguin--211522663",
+  "https://tvplus.com.tr/dizi-izle/the-vampire-diaries--215099282",
+  "https://tvplus.com.tr/dizi-izle/the-flight-attendant--211904124",
+  "https://tvplus.com.tr/dizi-izle/gossip-girl--212676603",
+  "https://tvplus.com.tr/dizi-izle/full-circle--213752555",
+  "https://tvplus.com.tr/dizi-izle/the-pitt--212518851",
+  "https://tvplus.com.tr/dizi-izle/buyuk-tikinma--211015853",
+  "https://tvplus.com.tr/dizi-izle/yalnizim-mesut-bey--210969092",
+  "https://tvplus.com.tr/dizi-izle/prens--212161790",
+  "https://tvplus.com.tr/dizi-izle/duster--212673417",
+  "https://tvplus.com.tr/dizi-izle/love-death--212517696",
+  "https://tvplus.com.tr/dizi-izle/warrior--214074300",
+  "https://tvplus.com.tr/dizi-izle/peacemaker--211187087",
+  "https://tvplus.com.tr/dizi-izle/the-sex-lives-of-college-girls--212457531",
+  "https://tvplus.com.tr/dizi-izle/scars-of-beauty--214449432",
+  "https://tvplus.com.tr/dizi-izle/dmz--214076249",
+  "https://tvplus.com.tr/dizi-izle/pati--214191321",
+  "https://tvplus.com.tr/dizi-izle/xrated-queen--213028166",
+  "https://tvplus.com.tr/dizi-izle/garcia--214515774",
+  "https://tvplus.com.tr/dizi-izle/our-flag-means-death--213306488",
+  "https://tvplus.com.tr/dizi-izle/spymaster--213677021",
+  "https://tvplus.com.tr/dizi-izle/bookie--212457198",
+  "https://tvplus.com.tr/dizi-izle/the-confidante--213813516",
+  "https://tvplus.com.tr/dizi-izle/the-girls-on-the-bus--213020430",
+  "https://tvplus.com.tr/dizi-izle/pretty-little-liars-original-sin--212518778",
+  "https://tvplus.com.tr/dizi-izle/cekic-ve-gul-bir-behzat-c-hikayesi--212329810",
+  "https://tvplus.com.tr/dizi-izle/kaosun-anatomisi--214517199",
+  "https://tvplus.com.tr/dizi-izle/the-wire--210402710",
+  "https://tvplus.com.tr/dizi-izle/barry--211410333",
+  "https://tvplus.com.tr/dizi-izle/sharp-objects--210294828",
+  "https://tvplus.com.tr/dizi-izle/seytan-isi--213189404",
+  "https://tvplus.com.tr/dizi-izle/evil-lives-here--211409342",
+  "https://tvplus.com.tr/dizi-izle/obituary--214190891",
+  "https://tvplus.com.tr/dizi-izle/blinded-by-the-lights--213552570",
+  "https://tvplus.com.tr/dizi-izle/i-know-this-much-is-true--212923487",
+  "https://tvplus.com.tr/dizi-izle/the-outsider--212392972",
+  "https://tvplus.com.tr/dizi-izle/his-dark-materials--212441400",
+  "https://tvplus.com.tr/dizi-izle/rogue-heroes--212924120",
+  "https://tvplus.com.tr/dizi-izle/banshee--214680404",
+  "https://tvplus.com.tr/dizi-izle/mcmillion--212334125",
+  "https://tvplus.com.tr/dizi-izle/q-into-the-storm--212457322",
+  "https://tvplus.com.tr/dizi-izle/savior-complex--214626755",
+  "https://tvplus.com.tr/dizi-izle/angels-in-america--210710077",
+  "https://tvplus.com.tr/dizi-izle/task--213248517",
+  "https://tvplus.com.tr/dizi-izle/john-adams--212672189",
+  "https://tvplus.com.tr/dizi-izle/generation-kill--211951910",
+  "https://tvplus.com.tr/dizi-izle/scenes-from-a-marriage--210671913",
+  "https://tvplus.com.tr/dizi-izle/the-lady-and-the-dale--214190892",
+  "https://tvplus.com.tr/dizi-izle/watchmen--211393690",
+  "https://tvplus.com.tr/dizi-izle/house-of-saddam--212518541",
+  "https://tvplus.com.tr/dizi-izle/olive-kitteridge--213613704",
+  "https://tvplus.com.tr/dizi-izle/chernobyl--211463182",
+  "https://tvplus.com.tr/dizi-izle/show-me-a-hero--212518773",
+  "https://tvplus.com.tr/dizi-izle/the-sympathizer--213672518",
+  "https://tvplus.com.tr/dizi-izle/somebody-somewhere--212676584",
+  "https://tvplus.com.tr/dizi-izle/angel-of-death--213030867",
+  "https://tvplus.com.tr/dizi-izle/conan-obrien-must-go--212673539",
+  "https://tvplus.com.tr/dizi-izle/togetherness--211403033",
+  "https://tvplus.com.tr/dizi-izle/the-eastern-gate--213646060",
+  "https://tvplus.com.tr/dizi-izle/it-welcome-to-derry--214567328",
+  "https://tvplus.com.tr/dizi-izle/lovecraft-country--213673472",
+  "https://tvplus.com.tr/dizi-izle/ghost-nation--211186761",
+  "https://tvplus.com.tr/dizi-izle/alaskan-killer-bigfoot--211071033",
+  "https://tvplus.com.tr/dizi-izle/eli-roth-presents-my-possessed-pet--214573932",
+  "https://tvplus.com.tr/dizi-izle/the-baby--212868308",
+  "https://tvplus.com.tr/dizi-izle/wreck--213030223",
+  "https://tvplus.com.tr/dizi-izle/true-blood--211574632",
+  "https://tvplus.com.tr/dizi-izle/who-saw-the-peacock-dance-in-the-jungle--215547688",
+  "https://tvplus.com.tr/dizi-izle/houdininin-son-numaralari--213430140",
+  "https://tvplus.com.tr/dizi-izle/evil-lives-here-the-killer-speaks--211317614",
+  "https://tvplus.com.tr/dizi-izle/carnivale--211576703",
+  "https://tvplus.com.tr/dizi-izle/a-decent-man--213616284",
+  "https://tvplus.com.tr/dizi-izle/patria--213559052",
+  "https://tvplus.com.tr/dizi-izle/wolf--213028153",
+  "https://tvplus.com.tr/dizi-izle/ghost-brothers-lights-out--211768178",
+  "https://tvplus.com.tr/dizi-izle/destinations-of-the-damned-with-zak-bagans--212518716",
+  "https://tvplus.com.tr/dizi-izle/sokopop-yesilcam-101--211071431",
+  "https://tvplus.com.tr/dizi-izle/game-of-thrones--212200382",
+  "https://tvplus.com.tr/dizi-izle/house-of-the-dragon--210672578",
+  "https://tvplus.com.tr/dizi-izle/the-game-of-thrones-reunion-hosted-by-conan-obrien--214679995",
+  "https://tvplus.com.tr/dizi-izle/making-of-the-last-of-us--212922683",
+  "https://tvplus.com.tr/dizi-izle/the-ark--212902661",
+  "https://tvplus.com.tr/dizi-izle/band-of-brothers--211464484",
+  "https://tvplus.com.tr/dizi-izle/suicide-squad-isekai--213735372",
+  "https://tvplus.com.tr/dizi-izle/jade-armor--212922670",
+  "https://tvplus.com.tr/dizi-izle/ninjago-ejderhalarin-yukselisi--212867405",
+  "https://tvplus.com.tr/dizi-izle/silicon-valley--212883793",
+  "https://tvplus.com.tr/dizi-izle/entourage--211316963",
+  "https://tvplus.com.tr/dizi-izle/six-feet-under--210896611",
+  "https://tvplus.com.tr/dizi-izle/the-amazing-world-of-gumball--211901510",
+  "https://tvplus.com.tr/dizi-izle/rick-and-morty--212390750",
+  "https://tvplus.com.tr/dizi-izle/olumcul-sohret--215721936",
+  "https://tvplus.com.tr/dizi-izle/sex-and-the-city--214004906",
+  "https://tvplus.com.tr/dizi-izle/rome--212265169",
+  "https://tvplus.com.tr/dizi-izle/the-white-lotus--214799389",
+  "https://tvplus.com.tr/dizi-izle/the-big-bang-theory--213312820",
+  "https://tvplus.com.tr/dizi-izle/friends--212003029",
+  "https://tvplus.com.tr/dizi-izle/bilinmeyene-yolculuk--213429683",
+  "https://tvplus.com.tr/dizi-izle/johnny-vs-amber-the-us-trial--214567134",
+  "https://tvplus.com.tr/dizi-izle/johnny-vs-amber--215604901",
+  "https://tvplus.com.tr/dizi-izle/the-monuments--215595939",
+  "https://tvplus.com.tr/dizi-izle/true-beauty--215546962",
+  "https://tvplus.com.tr/dizi-izle/ignite--214801213",
+  "https://tvplus.com.tr/dizi-izle/please-die-my-beloved--214790469",
+  "https://tvplus.com.tr/dizi-izle/love-has-won-the-cult-of-mother-god--215416357",
+  "https://tvplus.com.tr/dizi-izle/i-love-la--215603715",
+  "https://tvplus.com.tr/dizi-izle/gang-war-pusher-street--214881748",
+  "https://tvplus.com.tr/dizi-izle/john-from-cincinnati--213813537",
+  "https://tvplus.com.tr/dizi-izle/euphoria-special-episodes--213752445",
+  "https://tvplus.com.tr/dizi-izle/the-passion--213678020",
+  "https://tvplus.com.tr/dizi-izle/the-heritage--215498613",
+  "https://tvplus.com.tr/dizi-izle/until-i-destroy-my-husbands-other-family--215498114",
+  "https://tvplus.com.tr/dizi-izle/mr-mikamis-classroom--214799400",
+  "https://tvplus.com.tr/dizi-izle/light-of-my-lion--214624578",
+  "https://tvplus.com.tr/dizi-izle/baby-assassins-everyday--214794432",
+  "https://tvplus.com.tr/dizi-izle/amerikan-canavari--214014472",
+  "https://tvplus.com.tr/dizi-izle/megan-thee-stallion-vs-tory-lanez-five-shots--212334031",
+  "https://tvplus.com.tr/dizi-izle/treme--211460361",
+  "https://tvplus.com.tr/dizi-izle/industry--212581365",
+  "https://tvplus.com.tr/dizi-izle/big-love--210672523",
+  "https://tvplus.com.tr/dizi-izle/the-murders--213750661",
+  "https://tvplus.com.tr/dizi-izle/cuma-gecesi-cinayeti--213475095",
+  "https://tvplus.com.tr/dizi-izle/unseen--213615212",
+  "https://tvplus.com.tr/dizi-izle/white-house-plumbers--210964067",
+  "https://tvplus.com.tr/dizi-izle/burning-bush--213376110",
+  "https://tvplus.com.tr/dizi-izle/gentleman-jack--213879454",
+  "https://tvplus.com.tr/dizi-izle/from-the-earth-to-the-moon--211234243",
+  "https://tvplus.com.tr/dizi-izle/undercover-underage--211233677",
+  "https://tvplus.com.tr/dizi-izle/olumcul-dusmanliklar--213879611",
+  "https://tvplus.com.tr/dizi-izle/cinayet-sehri--213429455",
+  "https://tvplus.com.tr/dizi-izle/hollywoodun-seytanlari--213030966",
+  "https://tvplus.com.tr/dizi-izle/evde-tek-basina--212929146",
+  "https://tvplus.com.tr/dizi-izle/at-home-finland--212394099",
+  "https://tvplus.com.tr/dizi-izle/clarence--211903599",
+  "https://tvplus.com.tr/dizi-izle/the-rehearsal--212816708",
+  "https://tvplus.com.tr/dizi-izle/the-unusual-suspects--213027976",
+  "https://tvplus.com.tr/dizi-izle/getting-on--211765074",
+  "https://tvplus.com.tr/dizi-izle/crashing--211332467",
+  "https://tvplus.com.tr/dizi-izle/its-florida-man--214445428",
+  "https://tvplus.com.tr/dizi-izle/ten-year-old-tom--211903590",
+  "https://tvplus.com.tr/dizi-izle/klara--213815227",
+  "https://tvplus.com.tr/dizi-izle/a-black-lady-sketch-show--210670419",
+  "https://tvplus.com.tr/dizi-izle/preppers--214069869",
+  "https://tvplus.com.tr/dizi-izle/viola--213749288",
+  "https://tvplus.com.tr/dizi-izle/rick-and-morty-the-anime--213614144",
+  "https://tvplus.com.tr/dizi-izle/poor-devil--213307199",
+  "https://tvplus.com.tr/dizi-izle/reframed-next-gen-narratives--212867214",
+  "https://tvplus.com.tr/dizi-izle/fantasmas--212673356",
+  "https://tvplus.com.tr/dizi-izle/man-in-room-301--213816607",
+  "https://tvplus.com.tr/dizi-izle/insecure--214680828",
+  "https://tvplus.com.tr/dizi-izle/mosaic--213751438",
+  "https://tvplus.com.tr/dizi-izle/the-girl-before--213734745",
+  "https://tvplus.com.tr/dizi-izle/trackers--212928489",
+  "https://tvplus.com.tr/dizi-izle/the-franchise--213027616",
+  "https://tvplus.com.tr/dizi-izle/smartless-on-the-road--212745406",
+  "https://tvplus.com.tr/dizi-izle/reformed--213738913",
+  "https://tvplus.com.tr/dizi-izle/bonkis--211134115",
+  "https://tvplus.com.tr/dizi-izle/masum--215414757",
+  "https://tvplus.com.tr/dizi-izle/sucun-her-ani--215807470",
+  "https://tvplus.com.tr/dizi-izle/vivant--215547302",
+  "https://tvplus.com.tr/dizi-izle/alef--213104254",
+  "https://tvplus.com.tr/dizi-izle/saygi-bir-ercument-cozer-dizisi--212278566",
+  "https://tvplus.com.tr/dizi-izle/julia--211902124",
+  "https://tvplus.com.tr/dizi-izle/ilk-ve-son--214753523",
+  "https://tvplus.com.tr/dizi-izle/the-walking-dead-daryl-dixon--179088269",
+  "https://tvplus.com.tr/dizi-izle/the-walking-dead-dead-city--165465784",
+  "https://tvplus.com.tr/dizi-izle/the-walking-dead-the-ones-who-live--176592903",
+  "https://tvplus.com.tr/dizi-izle/the-walking-dead--195247329",
+  "https://tvplus.com.tr/dizi-izle/tulsa-king--171404417",
+  "https://tvplus.com.tr/dizi-izle/teacup--200937017",
+  "https://tvplus.com.tr/dizi-izle/knuckles--202149615",
+  "https://tvplus.com.tr/dizi-izle/ted--224354541",
+  "https://tvplus.com.tr/dizi-izle/mayor-of-kingstown--170045505",
+  "https://tvplus.com.tr/dizi-izle/poker-face--170903852",
+  "https://tvplus.com.tr/dizi-izle/lockerbie-a-search-for-truth--200936735",
+  "https://tvplus.com.tr/dizi-izle/the-offer--202266794",
+  "https://tvplus.com.tr/dizi-izle/the-truth-about-the-harry-quebert-affair--198991671",
+  "https://tvplus.com.tr/dizi-izle/1923--168866346",
+  "https://tvplus.com.tr/dizi-izle/1883--168914244",
+  "https://tvplus.com.tr/dizi-izle/yellowstone--168273453",
+  "https://tvplus.com.tr/dizi-izle/the-marvelous-mrs-maisel--198939050",
+  "https://tvplus.com.tr/dizi-izle/mayfair-witches--161622205",
+  "https://tvplus.com.tr/dizi-izle/goliath--198939198",
+  "https://tvplus.com.tr/dizi-izle/landman--193657497",
+  "https://tvplus.com.tr/dizi-izle/special-ops-lioness--172096914",
+  "https://tvplus.com.tr/dizi-izle/fargo--188324212",
+  "https://tvplus.com.tr/dizi-izle/from--175748391",
+  "https://tvplus.com.tr/dizi-izle/kin--189425676",
+  "https://tvplus.com.tr/dizi-izle/daddy-issues--190977940",
+  "https://tvplus.com.tr/dizi-izle/upload--187743363",
+  "https://tvplus.com.tr/dizi-izle/hunters--187543320",
+  "https://tvplus.com.tr/dizi-izle/turk-dedektif--173634068",
+  "https://tvplus.com.tr/dizi-izle/lawmen-bass-reeves--176592607",
+  "https://tvplus.com.tr/dizi-izle/halo--180199988",
+  "https://tvplus.com.tr/dizi-izle/v11-futbolun-skandallari--197004353",
+  "https://tvplus.com.tr/dizi-izle/pyramid-game--203540903",
+  "https://tvplus.com.tr/dizi-izle/sanctuary-a-witchs-tale--183388798",
+  "https://tvplus.com.tr/dizi-izle/power-book-iii-raising-kanan--153031249",
+  "https://tvplus.com.tr/dizi-izle/bmf--152119278",
+  "https://tvplus.com.tr/dizi-izle/my-brilliant-friend--141744921",
+  "https://tvplus.com.tr/dizi-izle/son-of-a-critch--152624769",
+  "https://tvplus.com.tr/dizi-izle/buyuk-vaatler--175162132",
+  "https://tvplus.com.tr/dizi-izle/archie--185730808",
+  "https://tvplus.com.tr/dizi-izle/domina--183083421",
+  "https://tvplus.com.tr/dizi-izle/tom-jones--178726992",
+  "https://tvplus.com.tr/dizi-izle/marlow-cinayet-kulubu--174774256",
+  "https://tvplus.com.tr/dizi-izle/agatha-christienin-marplei--131562520",
+  "https://tvplus.com.tr/dizi-izle/a-bloody-lucky-day--203535504",
+  "https://tvplus.com.tr/dizi-izle/asli-gibidir--211071069",
+  "https://tvplus.com.tr/dizi-izle/ngela-diniz-murdered-and-convicted--215988201",
+  "https://tvplus.com.tr/dizi-izle/mira-her-sey-yolundaymis-gibi--223210914",
+  "https://tvplus.com.tr/dizi-izle/ballers--211404615",
+  "https://tvplus.com.tr/dizi-izle/bir-soygunun-icinde--215986266",
+  "https://tvplus.com.tr/dizi-izle/high-maintenance-web-series--215874405",
+  "https://tvplus.com.tr/dizi-izle/the-third-day--215806631",
+  "https://tvplus.com.tr/dizi-izle/yo-fui-un-asesino--216271155",
+  "https://tvplus.com.tr/dizi-izle/get-millie-black--216269681",
+  "https://tvplus.com.tr/dizi-izle/the-seduction--215708509",
+  "https://tvplus.com.tr/dizi-izle/gumruk-muhafaza-turkiye--216425820",
+  "https://tvplus.com.tr/dizi-izle/last-week-tonight-with-john-oliver--221766669",
+  "https://tvplus.com.tr/dizi-izle/chespirito-not-really-on-purpose--222531481",
+  "https://tvplus.com.tr/dizi-izle/dtf-st-louis--222615110",
+  "https://tvplus.com.tr/dizi-izle/yesilcam--174453331",
+  "https://tvplus.com.tr/dizi-izle/alef--174396425",
+  "https://tvplus.com.tr/dizi-izle/turk-dedektif--175048828",
+  "https://tvplus.com.tr/dizi-izle/kucuk-dahi-ibni-sina--204289254",
+  "https://tvplus.com.tr/dizi-izle/sanzelize-dugun-salonu--190473192",
+  "https://tvplus.com.tr/dizi-izle/eyvah-ramazan-bey--190472260",
+  "https://tvplus.com.tr/dizi-izle/son-gun--191033024",
+  "https://tvplus.com.tr/dizi-izle/dayton--190424099",
+  "https://tvplus.com.tr/dizi-izle/organizasyon-bizim-isimiz--191308599",
+  "https://tvplus.com.tr/dizi-izle/yesil-deniz-milenyum--191033224",
+  "https://tvplus.com.tr/dizi-izle/sebeke--191032617",
+  "https://tvplus.com.tr/dizi-izle/yardimci-oyuncu--191032376",
+  "https://tvplus.com.tr/dizi-izle/askimiz-yeter--190472216",
+  "https://tvplus.com.tr/dizi-izle/adalett--190472741",
+  "https://tvplus.com.tr/dizi-izle/kuzgun-dipsiz-karanlik--190472782",
+  "https://tvplus.com.tr/dizi-izle/tozkoparan-iskender-sir--207098311",
+  "https://tvplus.com.tr/dizi-izle/hur--190472662",
+  "https://tvplus.com.tr/dizi-izle/mahsusa--190472220",
+  "https://tvplus.com.tr/dizi-izle/metamorfoz--204288606",
+  "https://tvplus.com.tr/dizi-izle/marnali--205719373",
+  "https://tvplus.com.tr/dizi-izle/rumi--190472221",
+  "https://tvplus.com.tr/dizi-izle/cirak--205427054",
+  "https://tvplus.com.tr/dizi-izle/yanki-gorunmez-el--214627141",
+  "https://tvplus.com.tr/dizi-izle/gassal--205424276",
+  "https://tvplus.com.tr/dizi-izle/en-son-babalar-duyar--208836808",
+  "https://tvplus.com.tr/dizi-izle/yedi-guzel-adam--192331100",
+  "https://tvplus.com.tr/dizi-izle/elimi-birakma--207359643",
+  "https://tvplus.com.tr/dizi-izle/filinta--207879767",
+  "https://tvplus.com.tr/dizi-izle/avrupa-avrupa--208383776",
+  "https://tvplus.com.tr/dizi-izle/bizimkiler--197059955",
+  "https://tvplus.com.tr/dizi-izle/kuzenlerim--208714833",
+  "https://tvplus.com.tr/dizi-izle/yeditepe-istanbul--196370138",
+  "https://tvplus.com.tr/dizi-izle/sasifelek-cikmazi--208593423",
+  "https://tvplus.com.tr/dizi-izle/yedi-numara--196052872",
+  "https://tvplus.com.tr/dizi-izle/cicek-taksi--216737162",
+  "https://tvplus.com.tr/dizi-izle/little-disasters--216991484",
+  "https://tvplus.com.tr/dizi-izle/karanlikta-kosanlar--196047117",
+  "https://tvplus.com.tr/dizi-izle/oj-made-in-america--211186572",
+  "https://tvplus.com.tr/dizi-izle/the-loudest-voice--216983809",
+  "https://tvplus.com.tr/dizi-izle/doctor-foster--218817270",
+  "https://tvplus.com.tr/dizi-izle/clutch-the-nba-playoffs--212738510",
+  "https://tvplus.com.tr/dizi-izle/power-book-iv-force--163529742",
+  "https://tvplus.com.tr/dizi-izle/dedektif-george-gently--203040903",
+  "https://tvplus.com.tr/dizi-izle/joan-suc-patronu--210058187",
+  "https://tvplus.com.tr/dizi-izle/des--217560767",
+  "https://tvplus.com.tr/dizi-izle/tehlikeli-dostluk--217560763",
+  "https://tvplus.com.tr/dizi-izle/kucuk-bir-kasabada-cinayet--217560774",
+  "https://tvplus.com.tr/dizi-izle/bebek-fabrikasi--217561812",
+  "https://tvplus.com.tr/dizi-izle/bayan-fisherin-modern-cinayet-gizemleri--159503263",
+  "https://tvplus.com.tr/dizi-izle/commissario-ricciardi--157238329",
+  "https://tvplus.com.tr/dizi-izle/masum--172510947",
+  "https://tvplus.com.tr/dizi-izle/7yuz--174453845",
+  "https://tvplus.com.tr/dizi-izle/dogu--171557267",
+  "https://tvplus.com.tr/dizi-izle/tozkoparan-iskender-golge--200507833",
+  "https://tvplus.com.tr/dizi-izle/1973-biltmore-oteli-cinayeti--200307854",
+  "https://tvplus.com.tr/dizi-izle/akif--200308448",
+  "https://tvplus.com.tr/dizi-izle/kizil-elma-bir-fetih-oykusu--200357742",
+  "https://tvplus.com.tr/dizi-izle/koyu-beyaz--200461748",
+  "https://tvplus.com.tr/dizi-izle/modern-dogu-masallari--200463592",
+  "https://tvplus.com.tr/dizi-izle/serhat--200499941",
+  "https://tvplus.com.tr/dizi-izle/universdeli--200506412",
+  "https://tvplus.com.tr/dizi-izle/yangin-gunleri-independenta--200507265",
+  "https://tvplus.com.tr/dizi-izle/hay-sultan--204145180",
+  // ...
+];
+
+// Sitemap'ten otomatik çekmek istersen aşağıdaki satırı aç:
+// const URLS = fs.readFileSync("urls.txt", "utf-8").trim().split("\n");
+
+const TIMEOUT = 15000; // Sayfa yüklenme timeout (ms)
+const WAIT_AFTER_LOAD = 3000; // JS redirect'leri yakalamak için ekstra bekleme (ms)
+
+// Cookie eklemek istersen (logged-in test için):
+const COOKIES = [
+  // { name: "session", value: "xxx", domain: ".tvplus.com.tr", path: "/" },
+];
+
+// =====================================================
+// ANA FONKSİYON
+// =====================================================
+async function checkRedirects() {
+  const browser = await chromium.launch({ headless: true });
+  const context = await browser.newContext({
+    userAgent:
+      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
+  });
+
+  if (COOKIES.length > 0) {
+    await context.addCookies(COOKIES);
+  }
+
+  const results = [];
+
+  for (const url of URLS) {
+    const result = { url, finalUrl: "", redirected: false, chain: [], error: null };
+
+    try {
+      const page = await context.newPage();
+      const navigationLog = [];
+
+      // Her navigation event'ini yakala
+      page.on("framenavigated", (frame) => {
+        if (frame === page.mainFrame()) {
+          navigationLog.push(frame.url());
+        }
+      });
+
+      // Sayfaya git
+      await page.goto(url, { waitUntil: "networkidle", timeout: TIMEOUT });
+
+      // JS redirect'ler için ekstra bekle
+      await page.waitForTimeout(WAIT_AFTER_LOAD);
+
+      result.finalUrl = page.url();
+      result.chain = navigationLog;
+      result.redirected = url.replace(/\/$/, "") !== result.finalUrl.replace(/\/$/, "");
+
+      await page.close();
+    } catch (err) {
+      result.error = err.message;
+    }
+
+    // Konsola anlık çıktı
+    const status = result.error
+      ? "❌ HATA"
+      : result.redirected
+        ? "🔀 REDIRECT"
+        : "✅ OK";
+
+    console.log(`${status} | ${url}`);
+    if (result.redirected) {
+      console.log(`   → ${result.finalUrl}`);
+    }
+    if (result.error) {
+      console.log(`   → ${result.error}`);
+    }
+
+    results.push(result);
+  }
+
+  await browser.close();
+
+  // CSV raporu oluştur
+  const csvHeader = "url,final_url,redirected,redirect_chain,error";
+  const csvRows = results.map((r) => {
+    const chain = r.chain.join(" → ");
+    const error = r.error ? `"${r.error.replace(/"/g, '""')}"` : "";
+    return `${r.url},${r.finalUrl},${r.redirected},"${chain}",${error}`;
+  });
+
+  const csv = [csvHeader, ...csvRows].join("\n");
+  fs.writeFileSync("redirect-report.csv", csv);
+
+  // Özet
+  const redirectCount = results.filter((r) => r.redirected).length;
+  const errorCount = results.filter((r) => r.error).length;
+
+  console.log("\n========== ÖZET ==========");
+  console.log(`Toplam URL: ${results.length}`);
+  console.log(`Redirect: ${redirectCount}`);
+  console.log(`Hata: ${errorCount}`);
+  console.log(`Rapor: redirect-report.csv`);
+}
+
+checkRedirects();

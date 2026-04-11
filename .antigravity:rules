@@ -1,0 +1,45 @@
+# SEOsware - Proje Kuralları
+
+## Proje Nedir?
+SEOsware, Playwright tabanlı ileri düzey teknik SEO audit ve AI Search Optimization platformudur. Klasik SEO kontrollerinin yanında, AI arama motorlarında (ChatGPT, Gemini, Perplexity) sıralama kazanmaya yönelik audit yapan ilk açık kaynak araçtır.
+
+## Teknik Stack
+- Runtime: Node.js 18+
+- Tarayıcı Otomasyonu: Playwright (Chromium)
+- AI Analiz: Gemini API
+- Dil: JavaScript (CommonJS, require/module.exports)
+- Test: Node.js assert veya basit test runner
+- Çıktılar: JSON, Markdown, HTML
+
+## Mimari
+- src/auditors/ → Her SEO kontrolü ayrı modül (meta, links, images, performance, schema, security, accessibility, rendering, mobile, ai-search)
+- src/reporters/ → Rapor formatları (text, html)
+- src/integrations/ → Dış servisler (Gemini AI)
+- src/utils/ → Yardımcı fonksiyonlar (cosine similarity, history, diff)
+- config/ → Ayarlar ve URL listeleri
+- data/ → Çıktılar ve tarihsel veriler
+
+## Kod Kuralları
+- Her auditor async fonksiyon export eder
+- Her fonksiyon try/catch ile sarılır, hata durumunda boş sonuç döner
+- Türkçe console.log mesajları kullan
+- Config değerleri config/default.js'den okunur, hardcode yapma
+- .env'deki gizli anahtarları asla koda yazma
+
+## Modüller (Geliştirme Sırası)
+1. Proje iskeleti ve bağımlılıklar
+2. Mevcut audit kodunu modülerleştir
+3. AI Search Optimization Audit (llms.txt, AI bot erişimi, alıntılanabilirlik skoru, E-E-A-T)
+4. SEO Gate (deploy öncesi kontrol, exit code ile pass/fail)
+5. Tarihsel karşılaştırma (JSON kayıt, diff)
+6. AI Rapor (Gemini API ile analiz)
+7. HTML Dashboard (Chart.js, skor kartları)
+8. Test ve README
+
+## Hedef Kullanıcı
+Teknik SEO uzmanları ve web geliştirici ekipler. Aracı CLI'dan çalıştırıp rapor alıyorlar.
+
+## V2 Roadmap (Şu an geliştirme dışı)
+- Google Search Console API entegrasyonu
+- Web arayüzü (SaaS dönüşüm)
+- Slack/email bildirimler

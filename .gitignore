@@ -1,0 +1,16 @@
+node_modules/
+.env
+.DS_Store
+
+# Audit outputs
+data/*.json
+data/*.csv
+data/*.txt
+data/history/*
+!data/history/.gitkeep
+*.log
+
+# Reports
+seo-audit-report.*
+seo-audit-detail.*
+redirect-report.*

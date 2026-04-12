@@ -784,8 +784,8 @@
       pointer-events: all;
     }
     .ai-modal-content {
-      background: var(--bg-secondary);
-      border: 1px solid var(--border);
+      background: #ffffff;
+      border: none;
       width: 92%;
       max-width: 960px;
       max-height: 88vh;
@@ -794,13 +794,14 @@
       position: relative;
       padding: 40px;
       box-shadow: 0 25px 60px -12px rgba(0,0,0,0.6);
+      color: #1e293b;
     }
     .ai-modal-close {
       position: absolute;
       top: 18px; right: 18px;
-      background: rgba(255,255,255,0.08);
-      border: 1px solid var(--border);
-      color: white;
+      background: #f1f5f9;
+      border: 1px solid #e2e8f0;
+      color: #334155;
       width: 36px; height: 36px;
       border-radius: 50%;
       cursor: pointer;
@@ -812,43 +813,57 @@
       transition: background 0.2s;
     }
     .ai-modal-close:hover {
-      background: rgba(255,255,255,0.15);
+      background: #e2e8f0;
     }
-    .ai-report h2 {
-      color: var(--accent);
-      margin-top: 32px;
-      margin-bottom: 16px;
-      font-size: 20px;
-      border-bottom: 1px solid rgba(255,255,255,0.1);
+    /* AI Modal Header (stays dark-themed) */
+    .ai-modal-header {
+      background: var(--bg-secondary);
+      margin: -40px -40px 0;
+      padding: 28px 40px;
+      border-radius: var(--radius) var(--radius) 0 0;
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 32px;
+    }
+    .ai-modal-header h2 { color: white !important; margin: 0; font-size: 22px; }
+    .ai-modal-header p { color: #94a3b8 !important; margin: 4px 0 0; font-size: 13px; }
+    .ai-modal-header .ai-modal-close {
+      background: rgba(255,255,255,0.1);
+      border-color: rgba(255,255,255,0.2);
+      color: white;
+    }
+    .ai-modal-header .ai-modal-close:hover { background: rgba(255,255,255,0.2); }
+    /* AI Report — White background, dark text */
+    .ai-report { color: #1e293b; }
+    .ai-report, .ai-report * { color: #334155; }
+    .ai-report h1, .ai-report h2, .ai-report h3, .ai-report h4, .ai-report h5, .ai-report h6 {
+      color: #0f172a !important;
+      margin-top: 28px; margin-bottom: 14px;
+      font-size: 19px; font-weight: 700;
+      border-bottom: 2px solid #e2e8f0;
       padding-bottom: 8px;
     }
     .ai-report h2:first-child { margin-top: 0; }
-    .ai-report p { margin-bottom: 16px; color: #cbd5e1 !important; }
-    .ai-report table { width: 100%; border-collapse: collapse; margin-bottom: 24px; font-size: 14px; background: rgba(0,0,0,0.2) !important; }
-    .ai-report th { text-align: left; padding: 12px; background: rgba(255,255,255,0.08) !important; color: #e2e8f0 !important; border-bottom: 1px solid var(--border); font-weight: 600; }
-    .ai-report td { padding: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); color: #cbd5e1 !important; }
-    .ai-report tr:hover td { background: rgba(255,255,255,0.04); }
-    .ai-report ul, .ai-report ol { margin-bottom: 16px; padding-left: 20px; color: #cbd5e1 !important; }
-    .ai-report li { margin-bottom: 6px; color: #cbd5e1 !important; }
-    .ai-report strong, .ai-report b { color: #f1f5f9 !important; }
-    /* Force all text inside AI report to be readable on dark bg */
-    .ai-report, .ai-report * { color: #cbd5e1; }
-    .ai-report h1, .ai-report h2, .ai-report h3, .ai-report h4, .ai-report h5, .ai-report h6 { color: var(--accent) !important; }
-    .ai-report span, .ai-report div, .ai-report a { color: #cbd5e1 !important; }
-    .ai-report a { color: var(--accent-light) !important; text-decoration: underline; }
-    .ai-report code, .ai-report pre { color: #e2e8f0 !important; background: rgba(0,0,0,0.3) !important; padding: 2px 6px; border-radius: 4px; font-size: 13px; }
-    .ai-report blockquote { border-left: 3px solid var(--accent); padding-left: 16px; color: #94a3b8 !important; margin: 16px 0; }
-    .ai-report em, .ai-report i { color: #94a3b8 !important; }
-    .ai-report caption { color: #94a3b8 !important; }
-    /* Override any inline color/background styles Gemini might inject */
-    .ai-report [style*="color"] { color: #cbd5e1 !important; }
-    .ai-report h2[style*="color"] { color: var(--accent) !important; }
-    .ai-report th[style*="color"] { color: #e2e8f0 !important; }
-    .ai-report th[style*="background"], .ai-report thead[style*="background"] { background: rgba(255,255,255,0.08) !important; }
-    .ai-report td[style*="background"] { background: transparent !important; }
-    .ai-report tr[style*="background"] { background: transparent !important; }
-    .ai-report table[style*="background"] { background: rgba(0,0,0,0.2) !important; }
-    .ai-report [style*="border"] { border-color: rgba(255,255,255,0.1) !important; }
+    .ai-report h3 { font-size: 16px !important; border-bottom: 1px solid #f1f5f9; }
+    .ai-report p { margin-bottom: 14px; color: #475569 !important; line-height: 1.7; }
+    .ai-report strong, .ai-report b { color: #0f172a !important; }
+    .ai-report em, .ai-report i { color: #64748b !important; }
+    .ai-report a { color: #2563eb !important; text-decoration: underline; }
+    .ai-report table { width: 100%; border-collapse: collapse; margin-bottom: 24px; font-size: 14px; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; }
+    .ai-report th { text-align: left; padding: 12px 14px; background: #f8fafc !important; color: #0f172a !important; border-bottom: 2px solid #e2e8f0; font-weight: 600; font-size: 13px; }
+    .ai-report td { padding: 10px 14px; border-bottom: 1px solid #f1f5f9; color: #334155 !important; }
+    .ai-report tr:hover td { background: #f8fafc; }
+    .ai-report ul, .ai-report ol { margin-bottom: 16px; padding-left: 22px; color: #475569 !important; }
+    .ai-report li { margin-bottom: 6px; color: #475569 !important; line-height: 1.6; }
+    .ai-report code, .ai-report pre { color: #be185d !important; background: #fef2f2 !important; padding: 2px 6px; border-radius: 4px; font-size: 13px; }
+    .ai-report blockquote { border-left: 3px solid #6366f1; padding-left: 16px; color: #64748b !important; background: #f8fafc; margin: 16px 0; padding: 12px 16px; border-radius: 0 6px 6px 0; }
+    .ai-report span, .ai-report div { color: #334155 !important; }
+    .ai-report caption { color: #64748b !important; }
+    /* Loading state stays dark inside white modal */
+    #adhocAiLoading { color: #475569 !important; }
+    #adhocAiLoading p { color: #64748b !important; }
     .btn-ai {
       background: linear-gradient(135deg, #7c3aed, #a855f7);
       color: white;
@@ -1870,24 +1885,26 @@
 <!-- AI Insight Modal for Ad-Hoc Scans -->
 <div class="ai-modal-overlay" id="adhocAiModal">
   <div class="ai-modal-content">
-    <button class="ai-modal-close" onclick="closeAdhocAiModal()">✕</button>
-    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:24px;">
+    <div class="ai-modal-header">
       <div style="display:flex; align-items:center; gap: 14px;">
-        <div style="font-size:36px;">✨</div>
+        <div style="font-size:32px;">✨</div>
         <div>
-          <h2 style="margin:0; font-size:22px;">Yapay Zeka Teknik Denetim Raporu</h2>
-          <p style="color:var(--text-muted); margin:4px 0 0; font-size:13px;">Gemini 2.5 Flash tarafından oluşturuldu</p>
+          <h2>Yapay Zeka Teknik Denetim Raporu</h2>
+          <p>Gemini 2.5 Flash tarafından oluşturuldu</p>
         </div>
       </div>
-      <button class="btn btn-primary adhoc-pdf-btn" style="display:none; padding: 8px 16px; font-size: 13px;" onclick="downloadAdhocAiPdf()">📄 PDF İndir</button>
+      <div style="display:flex; align-items:center; gap:12px;">
+        <button class="btn btn-primary adhoc-pdf-btn" style="display:none; padding: 8px 16px; font-size: 13px;" onclick="downloadAdhocAiPdf()">📄 PDF İndir</button>
+        <button class="ai-modal-close" onclick="closeAdhocAiModal()">✕</button>
+      </div>
     </div>
     <div id="adhocAiLoading" style="display:none; text-align:center; padding: 48px 20px;">
       <div style="font-size:48px; animation: aiPulse 1.5s infinite;">🤖</div>
-      <p style="margin-top:20px; color:var(--text-secondary); font-size:15px;">Audit verileri Gemini'ye gönderildi...</p>
-      <p style="color:var(--text-muted); font-size:13px;">Kapsamlı teknik analiz raporu hazırlanıyor. Bu işlem 15-30 saniye sürebilir.</p>
+      <p style="margin-top:20px; font-size:15px;">Audit verileri Gemini'ye gönderildi...</p>
+      <p style="font-size:13px;">Kapsamlı teknik analiz raporu hazırlanıyor. Bu işlem 15-30 saniye sürebilir.</p>
     </div>
     <div id="adhocAiReportBox" class="ai-report"></div>
-    <div class="adhoc-pdf-btn" style="display:none; margin-top:32px; padding-top:24px; border-top:1px solid var(--border); text-align:right;">
+    <div class="adhoc-pdf-btn" style="display:none; margin-top:32px; padding-top:24px; border-top:1px solid #e2e8f0; text-align:right;">
       <button class="btn btn-primary" onclick="downloadAdhocAiPdf()">📄 PDF Olarak İndir</button>
     </div>
   </div>

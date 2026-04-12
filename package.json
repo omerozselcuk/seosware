@@ -1,6 +1,6 @@
 {
   "name": "seosware",
-  "version": "2.4.1",
+  "version": "2.5.0",
   "description": "Seosware Pro: Playwright-based SEO Auditor with Stitch UI Theme, JSON Export, and Gemini AI Insights",
   "main": "index.js",
   "scripts": {

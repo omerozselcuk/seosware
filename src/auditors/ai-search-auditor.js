@@ -509,25 +509,21 @@ async function checkEEAT(page) {
 
 async function checkSchemaDepth(page) {
   return await page.evaluate(() => {
-    const TARGET_TYPES = ["FAQPage", "HowTo", "Article", "Product"];
     const result = {
       totalSchemas: 0,
       targetSchemas: {},
       allTypes: [],
       depthScore: 0,
       maxDepthScore: 0,
+      depthPercentage: 0
     };
 
-    const ldScripts = document.querySelectorAll(
-      'script[type="application/ld+json"]'
-    );
-
+    const ldScripts = document.querySelectorAll('script[type="application/ld+json"]');
     const allItems = [];
 
     ldScripts.forEach((s) => {
       try {
         const data = JSON.parse(s.textContent);
-        // @graph destekli düzleştirme
         if (data["@graph"] && Array.isArray(data["@graph"])) {
           data["@graph"].forEach((item) => allItems.push(item));
         } else {
@@ -537,115 +533,49 @@ async function checkSchemaDepth(page) {
     });
 
     result.totalSchemas = allItems.length;
-    result.allTypes = allItems
-      .map((item) => item["@type"])
-      .filter(Boolean)
-      .flat();
+    result.allTypes = [...new Set(allItems.map((item) => item["@type"]).flat().filter(Boolean))];
 
-    // Her hedef tip için detay analizi
-    for (const targetType of TARGET_TYPES) {
-      const matching = allItems.filter((item) => {
-        const type = item["@type"];
-        if (Array.isArray(type)) return type.includes(targetType);
-        return type === targetType;
-      });
+    let score = 0;
+    let maxScore = 0;
 
-      if (matching.length === 0) {
-        result.targetSchemas[targetType] = { found: false, count: 0, depth: 0, details: null };
-        continue;
-      }
+    if (allItems.length > 0) {
+       maxScore = 15;
+       score += 5; // JSON-LD mevcut olduğu için taban puan
 
-      const analysis = { found: true, count: matching.length, instances: [] };
-
-      matching.forEach((schema) => {
-        const instance = { fields: Object.keys(schema), fieldCount: Object.keys(schema).length, issues: [] };
-        result.maxDepthScore += 3; // Her instance için max 3 puan
-
-        // Tip-özel derinlik kontrolü
-        switch (targetType) {
-          case "FAQPage": {
-            const questions = schema.mainEntity || [];
-            instance.questionCount = Array.isArray(questions) ? questions.length : 0;
-            instance.hasAcceptedAnswer = Array.isArray(questions)
-              ? questions.every((q) => q.acceptedAnswer?.text)
-              : false;
-            if (instance.questionCount === 0) instance.issues.push("mainEntity boş veya eksik");
-            if (instance.questionCount > 0 && !instance.hasAcceptedAnswer)
-              instance.issues.push("Bazı sorularda acceptedAnswer eksik");
-            // Skor
-            let s = 0;
-            if (instance.questionCount > 0) s++;
-            if (instance.questionCount >= 3) s++;
-            if (instance.hasAcceptedAnswer) s++;
-            result.depthScore += s;
-            break;
-          }
-
-          case "HowTo": {
-            const steps = schema.step || [];
-            instance.stepCount = Array.isArray(steps) ? steps.length : 0;
-            instance.hasImages = Array.isArray(steps) ? steps.some((s) => s.image) : false;
-            instance.hasTotalTime = !!schema.totalTime;
-            instance.hasSupply = !!(schema.supply && schema.supply.length > 0);
-            instance.hasTool = !!(schema.tool && schema.tool.length > 0);
-            if (instance.stepCount === 0) instance.issues.push("step dizisi boş");
-            let s = 0;
-            if (instance.stepCount > 0) s++;
-            if (instance.hasTotalTime || instance.hasImages) s++;
-            if (instance.hasSupply || instance.hasTool) s++;
-            result.depthScore += s;
-            break;
-          }
-
-          case "Article": {
-            instance.hasHeadline = !!schema.headline;
-            instance.hasAuthor = !!schema.author;
-            instance.hasDatePublished = !!schema.datePublished;
-            instance.hasDateModified = !!schema.dateModified;
-            instance.hasImage = !!schema.image;
-            instance.hasPublisher = !!schema.publisher;
-            instance.hasDescription = !!schema.description;
-            instance.hasWordCount = !!schema.wordCount;
-            if (!schema.headline) instance.issues.push("headline eksik");
-            if (!schema.author) instance.issues.push("author eksik");
-            if (!schema.datePublished) instance.issues.push("datePublished eksik");
-            let s = 0;
-            if (instance.hasHeadline && instance.hasAuthor) s++;
-            if (instance.hasDatePublished && instance.hasPublisher) s++;
-            if (instance.hasImage && instance.hasDescription) s++;
-            result.depthScore += s;
-            break;
-          }
-
-          case "Product": {
-            instance.hasName = !!schema.name;
-            instance.hasDescription = !!schema.description;
-            instance.hasImage = !!schema.image;
-            instance.hasOffers = !!schema.offers;
-            instance.hasBrand = !!schema.brand;
-            instance.hasReview = !!schema.review;
-            instance.hasAggregateRating = !!schema.aggregateRating;
-            instance.hasSku = !!schema.sku || !!schema.gtin13 || !!schema.gtin;
-            if (!schema.name) instance.issues.push("name eksik");
-            if (!schema.offers) instance.issues.push("offers eksik");
-            let s = 0;
-            if (instance.hasName && instance.hasDescription) s++;
-            if (instance.hasOffers && instance.hasImage) s++;
-            if (instance.hasAggregateRating || instance.hasReview) s++;
-            result.depthScore += s;
-            break;
-          }
-        }
-
-        analysis.instances.push(instance);
-      });
-
-      result.targetSchemas[targetType] = analysis;
+       let fieldCount = 0;
+       allItems.forEach(item => {
+           const keys = Object.keys(item).filter(k => !k.startsWith('@'));
+           fieldCount += keys.length;
+           
+           if (item.name || item.headline || item.title) score += 1;
+           if (item.description || item.abstract) score += 1;
+           if (item.image || item.thumbnailUrl || item.logo) score += 1;
+           if (item.author || item.creator || item.director || item.publisher) score += 1;
+           if (item.aggregateRating || item.review) score += 2;
+           if (item.offers) score += 1;
+           if (item.mainEntity || item.step || item.hasPart || item.itemListElement) score += 2;
+           if (item.datePublished || item.dateModified) score += 1;
+       });
+       if (fieldCount > 5) score += 2;
+       if (fieldCount > 15) score += 2;
+       if (fieldCount > 30) score += 2;
     }
 
-    // Genel maxDepthScore en az TARGET_TYPES * 3 olsun (her biri için en az 1 instance varsayımı)
-    if (result.maxDepthScore === 0) result.maxDepthScore = TARGET_TYPES.length * 3;
-    result.depthPercentage = Math.round((result.depthScore / result.maxDepthScore) * 100);
+    result.depthScore = score;
+    result.maxDepthScore = Math.max(score, maxScore);
+    if (result.maxDepthScore === 0) result.maxDepthScore = 15;
+    result.depthPercentage = Math.min(100, Math.round((result.depthScore / result.maxDepthScore) * 100));
+
+    result.allTypes.forEach(t => {
+       result.targetSchemas[t] = { 
+         found: true, 
+         count: allItems.filter(i => {
+           const type = i["@type"];
+           if (Array.isArray(type)) return type.includes(t);
+           return type === t;
+         }).length 
+       };
+    });
 
     return result;
   });

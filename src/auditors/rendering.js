@@ -9,23 +9,17 @@ async function auditRendering(page, renderedContent, url, TIMEOUT) {
 
   let rawHtmlContent = "";
   try {
-    const rawResponse = await page.context().newPage().then(async (rawPage) => {
-      await rawPage.route("**/*", (route) => {
-        const resourceType = route.request().resourceType();
-        if (resourceType === "script") {
-          route.abort();
-        } else {
-          route.continue();
-        }
-      });
-      try {
-        await rawPage.goto(url, { waitUntil: "domcontentloaded", timeout: TIMEOUT });
-        rawHtmlContent = await rawPage.content();
-      } catch {}
-      await rawPage.close();
-      return rawHtmlContent;
-    });
-  } catch (e) {}
+    const rawContext = await page.context().browser().newContext({ javaScriptEnabled: false });
+    const rawPage = await rawContext.newPage();
+    try {
+      await rawPage.goto(url, { waitUntil: "domcontentloaded", timeout: TIMEOUT });
+      rawHtmlContent = await rawPage.content();
+    } catch {}
+    await rawPage.close();
+    await rawContext.close();
+  } catch (e) {
+    console.error(`[Rendering Auditor] Error fetching raw HTML: ${e.message}`);
+  }
 
   result.rawHtmlPresent = !!rawHtmlContent;
 

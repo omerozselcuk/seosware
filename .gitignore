@@ -14,3 +14,9 @@ data/history/*
 seo-audit-report.*
 seo-audit-detail.*
 redirect-report.*
+
+# Local test and debug files
+*.json
+scratch.js
+src/debug.js
+src/debug_cls.js

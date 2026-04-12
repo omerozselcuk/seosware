@@ -91,6 +91,35 @@ async function runAudit(url, config = {}) {
 
     // 2. Load Page Setup
     const startTime = Date.now();
+    await page.addInitScript(() => {
+      // INP Observer
+      if (typeof window.__inpValue === 'undefined') window.__inpValue = 0;
+      if (!window.__inpObserverActive) {
+        window.__inpObserverActive = true;
+        try {
+          new PerformanceObserver((list) => {
+            for (const entry of list.getEntries()) {
+              if ((entry.interactionId || entry.name === 'click' || entry.name.startsWith('mouse') || entry.name.startsWith('pointer')) && entry.duration > window.__inpValue) {
+                window.__inpValue = Math.round(entry.duration);
+              }
+            }
+          }).observe({ type: "event", durationThreshold: 0, buffered: true });
+        } catch (e) {}
+      }
+      // CLS Observer
+      if (typeof window.__clsValue === 'undefined') window.__clsValue = 0;
+      if (!window.__clsObserverActive) {
+        window.__clsObserverActive = true;
+        try {
+          new PerformanceObserver((list) => {
+            for (const entry of list.getEntries()) {
+              if (!entry.hadRecentInput) window.__clsValue += entry.value;
+            }
+          }).observe({ type: 'layout-shift', buffered: true });
+        } catch (e) {}
+      }
+    });
+    
     const response = await page.goto(url, { waitUntil: "networkidle", timeout: TIMEOUT });
     await page.waitForTimeout(WAIT_AFTER_LOAD);
     result.loadTime = Date.now() - startTime;

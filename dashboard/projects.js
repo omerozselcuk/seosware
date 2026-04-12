@@ -94,12 +94,19 @@ async function loadHistory(id) {
           <td>${new Date(h.timestamp).toLocaleString()}</td>
           <td>${h.totalUrls} Sayfa</td>
           <td>
-            <button class="btn btn-outline" style="padding: 4px 8px; font-size: 11px;" onclick="openAiInsight('${h.id}')">🤖 AI Analiz</button>
+            <div style="display:flex; gap:8px;">
+              <button class="btn btn-primary" style="padding: 4px 10px; font-size: 11px;" onclick="viewHistory('${activeProjectId}', '${h.id}')">👁️ Görüntüle</button>
+              <button class="btn btn-outline" style="padding: 4px 10px; font-size: 11px;" onclick="openAiInsight('${h.id}')">🤖 AI Analiz</button>
+            </div>
           </td>
         </tr>
       `).join('');
     }
   } catch (e) {}
+}
+
+function viewHistory(pId, hId) {
+  window.location.href = `index.html?pId=${pId}&hId=${hId}`;
 }
 
 async function compareSelected() {
@@ -228,6 +235,7 @@ async function openAiInsight(runId) {
       </div>`;
     } else {
       reportBox.innerHTML = data.html;
+      document.querySelectorAll('.pdf-btn').forEach(btn => btn.style.display = 'block');
     }
   } catch (e) {
     loading.style.display = 'none';
@@ -237,6 +245,30 @@ async function openAiInsight(runId) {
 
 function closeAiModal() {
   document.getElementById('aiModal').classList.remove('open');
+  document.querySelectorAll('.pdf-btn').forEach(btn => btn.style.display = 'none');
+}
+
+function downloadAiReportAsPdf() {
+  const element = document.getElementById('aiReportBox');
+  const projectName = document.getElementById('activeProjectName').innerText || 'Proje';
+  const dateStr = new Date().toISOString().split('T')[0];
+  const filename = `Seosware-AI-Raporu-${projectName}-${dateStr}.pdf`.replace(/\s+/g, '-');
+
+  // PDF Options
+  const opt = {
+    margin:       10,
+    filename:     filename,
+    image:        { type: 'jpeg', quality: 0.98 },
+    html2canvas:  { 
+      scale: 2, 
+      useCORS: true,
+      backgroundColor: '#0f172a' // Match Seosware dark theme background
+    },
+    jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+  };
+
+  // Run html2pdf
+  html2pdf().set(opt).from(element).save();
 }
 
 // Init

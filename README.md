@@ -29,11 +29,11 @@ Seosware crawls your pages with a real Chromium browser, extracts 100+ SEO signa
 - **History Tracking** — Saves all previous run snapshots locally to JSON.
 - **Delta Analysis** — Compares any two historical snapshots to find regressions.
 
-### ✨ Seosware Pro: Holistic AI Insight Engine (v2.1)
+### ✨ Seosware Pro: Holistic AI Insight Engine (v2.1.1)
 - **Holistic Gemini 2.5 Analysis** — Automated analysis covering Technical SEO, Content, Links, Quality, Security, and Speed.
-- **Executive Summaries** — Human-readable high-level reports for stakeholders.
+- **AI Report Caching** — Reports are saved locally to prevent redundant API calls and enable instant retrieval.
+- **PDF Export** — Export professional AI audit reports as PDF documents with a single click.
 - **Full SEO Action Plans** — Prioritized, multi-category task lists (P0-P3) for complete site optimization.
-- **AI Search projection** — Readiness audit for LLM-based search engines.
 
 ### 📊 Local Dashboard
 - Dark-mode glassmorphism UI

@@ -662,7 +662,19 @@
     }
 
     .empty-state-sub { font-size: 13px; color: var(--text-muted); }
-  </style>
+    /* History Banner */
+  .history-banner {
+    display: none;
+    background: linear-gradient(90deg, #1e1b4b, #312e81);
+    color: white;
+    padding: 12px 24px;
+    border-radius: 12px;
+    margin-bottom: 24px;
+    align-items: center;
+    justify-content: space-between;
+    border: 1px solid rgba(255,255,255,0.1);
+  }
+</style>
 </head>
 <body>
 
@@ -681,36 +693,48 @@
     <a href="projects.html" style="color:var(--text-muted); text-decoration:none; font-size:14px; font-weight:500;">Projeler & Geçmiş</a>
   </div>
 
-  <div class="header-status">
-    <div class="status-dot" id="statusDot"></div>
-    <span id="statusText">Hazır</span>
+    <div class="header-status">
+      <div class="status-dot" id="statusDot"></div>
+      <span id="statusText">Hazır</span>
+    </div>
+  </header>
+
+  <div class="history-banner" id="historyBanner">
+    <div style="display:flex; align-items:center; gap:12px;">
+      <span style="font-size:20px;">📅</span>
+      <div>
+        <div style="font-size:14px; font-weight:700;">Geçmiş Rapor İzleniyor</div>
+        <div style="font-size:12px; opacity:0.7;" id="historyDate">10 Nisan 2026</div>
+      </div>
+    </div>
+    <button class="btn btn-primary" style="padding:4px 12px; font-size:12px;" onclick="window.location.href='index.html'">Yeni Tarama Yap</button>
   </div>
-</header>
+
+  <div class="search-section" id="searchSection">
+    <section class="input-section" id="inputSection">
+      <div class="section-title">🔗 Audit URL'leri</div>
+      <div class="section-subtitle">Taramak istediğiniz URL'leri ekleyin, sonra analizi başlatın.</div>
+
+      <div class="url-input-wrapper">
+        <input type="text" class="url-input" id="urlInput" placeholder="https://example.com" />
+        <button class="btn btn-add" onclick="addUrl()">+ Ekle</button>
+      </div>
+
+      <div class="url-list" id="urlList"></div>
+
+      <div class="action-bar">
+        <span class="url-count" id="urlCount">0 URL eklendi</span>
+        <div style="display:flex;gap:12px">
+          <button class="btn btn-outline" id="clearBtn" onclick="clearUrls()" style="display:none">🧹 Temizle</button>
+          <button class="btn btn-primary" id="startBtn" onclick="startAudit()" disabled>⚡ Audit Başlat</button>
+          <button class="btn btn-outline" id="startSiteBtn" onclick="startSiteAudit()" disabled>🕷️ Site-wide Crawl</button>
+        </div>
+      </div>
+    </section>
+  </div>
 
 <div class="container">
 
-  <!-- URL INPUT -->
-  <section class="input-section" id="inputSection">
-    <div class="section-title">🔗 Audit URL'leri</div>
-    <div class="section-subtitle">Taramak istediğiniz URL'leri ekleyin, sonra analizi başlatın.</div>
-
-    <div class="url-input-wrapper">
-      <input type="text" class="url-input" id="urlInput" placeholder="https://example.com" />
-      <button class="btn btn-add" onclick="addUrl()">+ Ekle</button>
-    </div>
-
-    <div class="url-list" id="urlList"></div>
-
-    <div class="action-bar">
-      <span class="url-count" id="urlCount">0 URL eklendi</span>
-      <div style="display:flex; gap:12px;">
-        <button class="btn btn-danger" onclick="clearUrls()" id="clearBtn" style="display:none">Temizle</button>
-        <button class="btn btn-add" onclick="startSiteAudit()" id="startSiteBtn" disabled>
-          🕸️ Site Crawl
-        </button>
-        <button class="btn btn-primary" onclick="startAudit()" id="startBtn" disabled>
-          🚀 Page Audit
-        </button>
       </div>
     </div>
   </section>
@@ -744,7 +768,7 @@
     <div class="empty-state-sub">Yukarıya URL'lerinizi ekleyip analizi başlatın</div>
   </div>
 
-</div>
+  </div> <!-- results list / container end -->
 
 <script>
   // ─── STATE ───
@@ -1224,6 +1248,38 @@
       <div class="stat-row"><span class="stat-label">Lazy Loaded</span><span class="stat-value">${imgs.lazyLoadedImages||0}</span></div>
     </div>`;
   }
+  // ─── INITIALIZATION & HISTORY LOADING ───
+  window.onload = async () => {
+    const params = new URLSearchParams(window.location.search);
+    const pId = params.get('pId');
+    const hId = params.get('hId');
+
+    if (pId && hId) {
+      // History Mode
+      document.getElementById('searchSection').style.display = 'none';
+      document.getElementById('emptyState').style.display = 'none';
+      const banner = document.getElementById('historyBanner');
+      banner.style.display = 'flex';
+      document.getElementById('statusText').textContent = 'Geçmiş Rapor';
+      
+      try {
+        const res = await fetch(`/api/projects/${pId}/history/${hId}`);
+        const data = await res.json();
+        
+        if (data && data.results) {
+          document.getElementById('historyDate').textContent = new Date(data.timestamp).toLocaleString();
+          results = data.results;
+          renderResults();
+        } else {
+          alert('Rapor bulunamadı.');
+          window.location.href = 'index.html';
+        }
+      } catch (e) {
+        console.error(e);
+        alert('Rapor yüklenirken hata oluştu.');
+      }
+    }
+  };
 </script>
 
 </body>

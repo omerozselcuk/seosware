@@ -127,6 +127,21 @@ async function getHistoryItem(projectId, historyId) {
   }
 }
 
+async function updateHistoryItem(projectId, historyId, updateData) {
+  const filePath = path.join(HISTORY_DIR, projectId, `${historyId}.json`);
+  try {
+    const existingData = await getHistoryItem(projectId, historyId);
+    if (!existingData) return null;
+    
+    const updatedData = { ...existingData, ...updateData };
+    await fs.writeFile(filePath, JSON.stringify(updatedData, null, 2));
+    return updatedData;
+  } catch (err) {
+    console.error(`[Storage] Failed to update history item at ${filePath}:`, err);
+    return null;
+  }
+}
+
 // Call init directly on load
 initStorage();
 
@@ -137,5 +152,6 @@ module.exports = {
   deleteProject,
   saveHistory,
   getHistoryList,
-  getHistoryItem
+  getHistoryItem,
+  updateHistoryItem
 };

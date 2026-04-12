@@ -5,6 +5,7 @@
   <title>Projeler & Geçmiş — Seosware</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
   <style>
     /* Reuse core styles and add specific ones for Projects */
     :root {
@@ -192,12 +193,15 @@
 <div class="modal-overlay" id="aiModal">
   <div class="modal-content">
     <button class="modal-close" onclick="closeAiModal()">×</button>
-    <div style="display:flex; align-items:center; gap: 12px; margin-bottom:24px;">
-      <div style="font-size:32px;">✨</div>
-      <div>
-        <h2 style="margin:0;">Yapay Zeka Teknik Denetim Raporu</h2>
-        <p style="color:var(--text-muted); margin:0; font-size:14px;">Gemini tarafindan analiz ediliyor...</p>
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:24px;">
+      <div style="display:flex; align-items:center; gap: 12px;">
+        <div style="font-size:32px;">✨</div>
+        <div>
+          <h2 style="margin:0;">Yapay Zeka Teknik Denetim Raporu</h2>
+          <p style="color:var(--text-muted); margin:0; font-size:14px;">Gemini tarafindan analiz ediliyor...</p>
+        </div>
       </div>
+      <button class="btn btn-primary pdf-btn" style="display:none; padding: 8px 16px; font-size: 13px;" onclick="downloadAiReportAsPdf()">📄 PDF İndir</button>
     </div>
     <div id="aiLoading" style="display:none; text-align:center; padding: 40px;">
       <div style="font-size:40px; animation: pulse 1.5s infinite;">🤖</div>
@@ -205,6 +209,9 @@
       <style>@keyframes pulse { 0% { transform: scale(1); opacity: 0.8; } 50% { transform: scale(1.2); opacity: 1; } 100% { transform: scale(1); opacity: 0.8; } }</style>
     </div>
     <div id="aiReportBox" class="ai-report"></div>
+    <div class="pdf-btn" style="display:none; margin-top:32px; padding-top:24px; border-top:1px solid var(--border); text-align:right;">
+      <button class="btn btn-primary" onclick="downloadAiReportAsPdf()">📄 PDF Olarak İndir</button>
+    </div>
   </div>
 </div>
 

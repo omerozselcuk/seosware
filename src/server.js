@@ -183,6 +183,12 @@ app.get('/api/projects/:id/history', async (req, res) => {
   res.json(list);
 });
 
+app.get('/api/projects/:id/history/:historyId', async (req, res) => {
+  const data = await storage.getHistoryItem(req.params.id, req.params.historyId);
+  if (!data) return res.status(404).json({ error: "History item not found" });
+  res.json(data);
+});
+
 app.get('/api/projects/:id/delta', async (req, res) => {
   const { runA, runB } = req.query; // IDs matching history filename
   if(!runA || !runB) return res.status(400).json({error: "runA and runB params needed"});
@@ -195,11 +201,15 @@ app.get('/api/projects/:id/delta', async (req, res) => {
   const deltas = compareRuns(hA.results, hB.results);
   res.json(deltas);
 });
-
 app.post('/api/projects/:id/history/:runId/insight', async (req, res) => {
   try {
     const historyData = await storage.getHistoryItem(req.params.id, req.params.runId);
     if (!historyData) return res.status(404).json({error: "History not found"});
+    
+    // Check if we already have a cached insight
+    if (historyData.aiInsight) {
+      return res.json({ html: historyData.aiInsight, cached: true });
+    }
     
     // Check if API key is provided
     if (!process.env.GEMINI_API_KEY) {
@@ -207,7 +217,11 @@ app.post('/api/projects/:id/history/:runId/insight', async (req, res) => {
     }
     
     const htmlReport = await generateInsight(historyData);
-    res.json({ html: htmlReport });
+    
+    // Save to cache
+    await storage.updateHistoryItem(req.params.id, req.params.runId, { aiInsight: htmlReport });
+    
+    res.json({ html: htmlReport, cached: false });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

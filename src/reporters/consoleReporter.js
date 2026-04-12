@@ -46,8 +46,8 @@ function reportConsole(result) {
     // llms.txt
     if (ai.llmsTxt && !ai.llmsTxt.error) {
       const llms = ai.llmsTxt['llms.txt'];
-      const llmsFull = ai.llmsTxt['llms-full.txt'];
-      console.log(` llms.txt: ${llms?.exists ? '\u2705 Mevcut' : '\u274c Yok'} | llms-full.txt: ${llmsFull?.exists ? '\u2705 Mevcut' : '\u274c Yok'}`);
+      const llmsFull = ai.llmsTxt['llms-full.txt']; // Will be undefined but harmless to remove later
+      console.log(` llms.txt: ${llms?.exists ? '\u2705 Mevcut' : '\u274c Yok'}`);
       if (llms?.exists) {
         const spec = llms.spec;
         console.log(`   Spec: H1=${spec.hasH1 ? '\u2705' : '\u274c'} Blockquote=${spec.hasBlockquote ? '\u2705' : '\u274c'} Markdown=${spec.isMarkdown ? '\u2705' : '\u274c'}`);

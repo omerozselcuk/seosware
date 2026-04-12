@@ -7,132 +7,107 @@ async function auditPerformance(page) {
     longTasks: [],
     renderBlockingResources: [],
     unusedCssPercent: null,
+    unusedCssList: [],
     unusedJsPercent: null,
-    inp: null,
+    unusedJsList: [],
+    inp: 0
   };
 
-  // CWV
   try {
-    const cwv = await page.evaluate(() => {
-      const timing = performance.timing;
-      return {
-        domContentLoaded: timing.domContentLoadedEventEnd - timing.navigationStart,
-        fullyLoaded: timing.loadEventEnd - timing.navigationStart,
+    const metrics = await page.evaluate(async () => {
+      const getNavigationDetails = () => {
+        const [nav] = performance.getEntriesByType("navigation");
+        return nav ? { domContentLoaded: Math.round(nav.domContentLoadedEventEnd), fullyLoaded: Math.round(nav.loadEventEnd) } : {};
       };
-    });
-    result.domContentLoaded = cwv.domContentLoaded;
-    result.fullyLoaded = cwv.fullyLoaded;
-  } catch (e) {}
 
-  // LCP
-  try {
-    result.lcp = await page.evaluate(() => {
-      return new Promise((resolve) => {
-        new PerformanceObserver((list) => {
-          const entries = list.getEntries();
-          resolve(entries[entries.length - 1]?.startTime || null);
-        }).observe({ type: "largest-contentful-paint", buffered: true });
-        setTimeout(() => resolve(null), 3000);
-      });
-    });
-  } catch (e) {}
+      const getLCP = () => {
+        return new Promise((resolve) => {
+          new PerformanceObserver((list) => {
+            const entries = list.getEntries();
+            const lastEntry = entries[entries.length - 1];
+            resolve(Math.round(lastEntry.startTime));
+          }).observe({ type: "largest-contentful-paint", buffered: true });
+          setTimeout(() => resolve(null), 5000);
+        });
+      };
 
-  // CLS
-  try {
-    result.cls = await page.evaluate(() => {
-      return new Promise((resolve) => {
-        let cls = 0;
+      const getCLS = () => {
+        let clsValue = 0;
         new PerformanceObserver((list) => {
           for (const entry of list.getEntries()) {
-            if (!entry.hadRecentInput) cls += entry.value;
+            if (!entry.hadRecentInput) clsValue += entry.value;
           }
         }).observe({ type: "layout-shift", buffered: true });
-        setTimeout(() => resolve(Math.round(cls * 1000) / 1000), 2000);
-      });
-    });
-  } catch (e) {}
+        return clsValue;
+      };
 
-  // Long Tasks
-  try {
-    result.longTasks = await page.evaluate(() => {
-      return new Promise((resolve) => {
-        const tasks = [];
-        new PerformanceObserver((list) => {
-          for (const entry of list.getEntries()) {
-            tasks.push({ duration: Math.round(entry.duration), startTime: Math.round(entry.startTime) });
-          }
-        }).observe({ type: "longtask", buffered: true });
-        setTimeout(() => resolve(tasks), 2000);
-      });
-    });
-  } catch (e) {}
+      const lcp = await getLCP();
+      const cls = getCLS();
+      const nav = getNavigationDetails();
 
-  // Render-blocking resources
-  try {
-    result.renderBlockingResources = await page.evaluate(() => {
-      const entries = performance.getEntriesByType("resource");
-      return entries
-        .filter((e) => e.renderBlockingStatus === "blocking")
-        .map((e) => ({ url: e.name, duration: Math.round(e.duration) }));
-    });
-  } catch (e) {}
+      const longTasks = performance.getEntriesByType("longtask").map((entry) => ({
+        duration: Math.round(entry.duration),
+        startTime: Math.round(entry.startTime),
+      }));
 
-    // Unused CSS
+      const renderBlocking = performance
+        .getEntriesByType("resource")
+        .filter((entry) => entry.renderBlockingStatus === "blocking")
+        .map((entry) => ({
+          url: entry.name,
+          duration: Math.round(entry.duration),
+        }));
+
+      return { lcp, cls: parseFloat(cls.toFixed(3)), ...nav, longTasks, renderBlockingResources: renderBlocking };
+    });
+
+    Object.assign(result, metrics);
+
+    // Unused CSS & JS Analysis
     try {
-      await page.coverage.startCSSCoverage();
       await page.coverage.startJSCoverage();
-
-      // Trigger a click to measure INP
-      const observerPromise = page.evaluate(() => {
-        return new Promise((resolve) => {
-          let inp = 0;
-          const observer = new PerformanceObserver((list) => {
-            const entries = list.getEntries();
-            for (const entry of entries) {
-              if (entry.interactionId) {
-                // INP is the max interaction duration
-                inp = Math.max(inp, entry.duration);
-              }
-            }
-          });
-          observer.observe({ type: "event", durationThreshold: 16, buffered: true });
-          setTimeout(() => {
-            observer.disconnect();
-            resolve(Math.round(inp));
-          }, 1000);
-        });
-      });
-
-      // Click center of the page
-      await page.mouse.click(500, 500);
-      result.inp = await observerPromise;
-
-      const cssCoverage = await page.coverage.stopCSSCoverage();
+      await page.coverage.startCSSCoverage();
+      await page.reload({ waitUntil: "networkidle" });
       const jsCoverage = await page.coverage.stopJSCoverage();
+      const cssCoverage = await page.coverage.stopCSSCoverage();
 
-      // Calc unused CSS
       let totalCss = 0, usedCss = 0;
-      for (const entry of cssCoverage) {
+      const unusedCssList = [];
+      cssCoverage.forEach((entry) => {
         totalCss += entry.text.length;
-        for (const range of entry.ranges) {
-          usedCss += range.end - range.start;
+        let used = 0;
+        entry.ranges.forEach((range) => (used += range.end - range.start));
+        usedCss += used;
+        const entryUnusedPct = Math.round(((entry.text.length - used) / entry.text.length) * 100);
+        if (entryUnusedPct > 50) {
+          unusedCssList.push({ url: entry.url, unusedPct: entryUnusedPct });
         }
-      }
+      });
       if (totalCss > 0) result.unusedCssPercent = Math.round(((totalCss - usedCss) / totalCss) * 100);
+      result.unusedCssList = unusedCssList.sort((a, b) => b.unusedPct - a.unusedPct);
 
-      // Calc unused JS
       let totalJs = 0, usedJs = 0;
-      for (const entry of jsCoverage) {
+      const unusedJsList = [];
+      jsCoverage.forEach((entry) => {
         totalJs += entry.text.length;
-        for (const range of entry.ranges) {
-          usedJs += range.end - range.start;
+        let used = 0;
+        entry.ranges.forEach((range) => (used += range.end - range.start));
+        usedJs += used;
+        const entryUnusedPct = Math.round(((entry.text.length - used) / entry.text.length) * 100);
+        if (entryUnusedPct > 50) {
+          unusedJsList.push({ url: entry.url, unusedPct: entryUnusedPct });
         }
-      }
+      });
       if (totalJs > 0) result.unusedJsPercent = Math.round(((totalJs - usedJs) / totalJs) * 100);
+      result.unusedJsList = unusedJsList.sort((a, b) => b.unusedPct - a.unusedPct);
 
     } catch (e) {
-      console.error("[Performance] Coverage/INP Error:", e.message);
+      console.error("[Performance Auditor] Coverage failed:", e.message);
     }
+
+  } catch (err) {
+    console.error("[Performance Auditor] Failed:", err.message);
+  }
 
   return result;
 }

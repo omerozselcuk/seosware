@@ -57,10 +57,62 @@
       animation: ambientDrift 20s ease-in-out infinite;
     }
 
-    @keyframes ambientDrift {
-      0%, 100% { transform: translate(0, 0) rotate(0deg); }
-      33% { transform: translate(1%, -1%) rotate(1deg); }
-      66% { transform: translate(-1%, 1%) rotate(-1deg); }
+    /* Details Modal */
+    .details-modal {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.85);
+      backdrop-filter: blur(10px);
+      display: none;
+      align-items: center; justify-content: center;
+      z-index: 1000;
+      opacity: 0; transition: opacity 0.3s ease;
+    }
+    .details-modal.active { display: flex; opacity: 1; }
+    .details-content {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      width: 90%; max-width: 800px;
+      max-height: 80vh;
+      border-radius: var(--radius);
+      padding: 32px;
+      overflow-y: auto;
+      position: relative;
+      box-shadow: var(--shadow);
+    }
+    .details-close {
+      position: absolute; top: 20px; right: 20px;
+      background: var(--bg-card);
+      border: none; color: white;
+      width: 32px; height: 32px;
+      border-radius: 50%; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .details-table {
+      width: 100%; border-collapse: collapse; margin-top: 20px;
+    }
+    .details-table th {
+      text-align: left; padding: 12px; border-bottom: 2px solid var(--border);
+      font-size: 13px; color: var(--text-muted); text-transform: uppercase;
+    }
+    .details-table td {
+      padding: 12px; border-bottom: 1px solid var(--border); font-size: 14px;
+      word-break: break-all;
+    }
+    .clickable-row { cursor: pointer; transition: background 0.2s; }
+    .clickable-row:hover { background: var(--bg-glass); }
+    .clickable-row::after { content: ' 🔍'; font-size: 12px; opacity: 0.6; }
+
+    .empty-detail {
+      padding: 40px;
+      text-align: center;
+      background: rgba(255,255,255,0.03);
+      border-radius: var(--radius);
+      border: 1px dashed var(--border);
+      color: var(--text-muted);
+      font-size: 14px;
+      margin: 20px 0;
     }
 
     /* === HEADER === */
@@ -782,11 +834,22 @@
 
   </div> <!-- results list / container end -->
 
+  <!-- DETAILS MODAL -->
+  <div class="details-modal" id="detailsModal">
+    <div class="details-content">
+      <button class="details-close" onclick="closeDetails()">✕</button>
+      <h2 id="detailsTitle" style="font-family:'Space Grotesk'; margin-bottom:10px;">Detaylar</h2>
+      <p id="detailsSub" style="font-size: 14px; color: var(--text-muted); margin-bottom: 20px;">Hataların tam listesi aşağıdadır.</p>
+      <div id="detailsTableContainer"></div>
+    </div>
+  </div>
+
 <script>
   // ─── STATE ───
   let urls = [];
   let results = [];
   let eventSource = null;
+  let currentActiveTabResult = null;
 
   // ─── URL MANAGEMENT ───
   const urlInput = document.getElementById('urlInput');
@@ -966,6 +1029,7 @@
   function renderResults() {
     if (results.length === 0) return;
 
+    document.getElementById('emptyState').style.display = 'none';
     document.getElementById('resultsSection').classList.add('active');
     document.getElementById('jsonDownloadBtn').style.display = 'inline-flex';
 
@@ -1004,6 +1068,7 @@
 
   function renderTab(idx) {
     const r = results[idx];
+    currentActiveTabResult = r;
     if (!r || r.error) {
       document.getElementById('resultsContent').innerHTML = `<div class="empty-state"><div class="empty-state-icon">❌</div><div class="empty-state-text">Audit hatası: ${r?.error || 'Bilinmeyen'}</div></div>`;
       return;
@@ -1072,11 +1137,135 @@
     return 'var(--red)';
   }
 
-  function badge(val, goodThreshold, badThreshold) {
-    if (typeof val === 'boolean') return val ? '<span class="badge badge-green">✓</span>' : '<span class="badge badge-red">✕</span>';
-    if (val <= goodThreshold) return `<span class="badge badge-green">${val}</span>`;
-    if (val <= badThreshold) return `<span class="badge badge-yellow">${val}</span>`;
-    return `<span class="badge badge-red">${val}</span>`;
+  function badge(val, goodThreshold, badThreshold, detailsKey) {
+    let clickableCls = detailsKey ? 'clickable-row' : '';
+    let onclick = detailsKey ? `onclick="showDetails('${detailsKey}')"` : '';
+    
+    if (typeof val === 'boolean') return val ? `<span class="badge badge-green">✓</span>` : `<span class="badge badge-red ${clickableCls}" ${onclick}>✕</span>`;
+    
+    let colorCls = 'badge-green';
+    if (val > goodThreshold) colorCls = 'badge-yellow';
+    if (val > badThreshold) colorCls = 'badge-red';
+    
+    return `<span class="badge ${colorCls} ${clickableCls}" ${onclick}>${val}</span>`;
+  }
+
+  // ─── DETAILS MODAL LOGIC ───
+
+  function showDetails(type) {
+    if (!currentActiveTabResult) return;
+    const r = currentActiveTabResult;
+    const modal = document.getElementById('detailsModal');
+    const title = document.getElementById('detailsTitle');
+    const container = document.getElementById('detailsTableContainer');
+    
+    let html = '';
+    let tLabel = '';
+
+    if (type === 'imagesWithoutAlt') {
+      tLabel = 'Alt Etiketi Olmayan Görseller';
+      const list = r.images?.imagesWithoutAltList || [];
+      if (list.length === 0 && (r.images?.imagesWithoutAlt || 0) > 0) {
+        html = emptyMessage();
+      } else {
+        html = renderTable(['Image URL'], list.map(url => [url]));
+      }
+    } else if (type === 'imagesWithoutDimensions') {
+      tLabel = 'Boyutları Belirtilmemiş Görseller';
+      const list = r.images?.imagesWithoutDimensionsList || [];
+      if (list.length === 0 && (r.images?.imagesWithoutDimensions || 0) > 0) {
+        html = emptyMessage();
+      } else {
+        html = renderTable(['Image URL'], list.map(url => [url]));
+      }
+    } else if (type === 'unusedJs') {
+      tLabel = 'Kullanılmayan JavaScript Dosyaları';
+      const list = r.performance?.unusedJsList || [];
+      if (list.length === 0 && (r.performance?.unusedJsPercent || 0) > 20) {
+        html = emptyMessage();
+      } else {
+        html = renderTable(['Dosya URL', 'Unused %'], list.map(i => [i.url, i.unusedPct + '%']));
+      }
+    } else if (type === 'unusedCss') {
+      tLabel = 'Kullanılmayan CSS Dosyaları';
+      const list = r.performance?.unusedCssList || [];
+      if (list.length === 0 && (r.performance?.unusedCssPercent || 0) > 20) {
+        html = emptyMessage();
+      } else {
+        html = renderTable(['Dosya URL', 'Unused %'], list.map(i => [i.url, i.unusedPct + '%']));
+      }
+    } else if (type === 'longTasks') {
+      tLabel = 'Lighthouse Long Tasks (Performans)';
+      html = renderTable(['Start Time', 'Duration'], (r.performance?.longTasks || []).map(t => [t.startTime + 'ms', t.duration + 'ms']));
+    } else if (type === 'renderBlocking') {
+      tLabel = 'Render Engelleyen Kaynaklar';
+      html = renderTable(['Resource URL', 'Duration'], (r.performance?.renderBlockingResources || []).map(i => [i.url, i.duration + 'ms']));
+    } else if (type === 'smallTapTargets') {
+      tLabel = 'Küçük Tap Targets (Mobil)';
+      const list = r.mobile?.smallTapTargetsList || [];
+      if (list.length === 0 && (r.mobile?.smallTapTargets || 0) > 0) {
+        html = emptyMessage();
+      } else {
+        html = renderTable(['Tag', 'Text / Placeholder', 'Selector'], list.map(i => [i.tag, i.text, `<code style="font-size:11px">${i.selector}</code>`]));
+      }
+    } else if (type === 'fontSizeIssues') {
+      tLabel = 'Küçük Yazı Tipleri (<12px)';
+      const list = r.mobile?.fontSizeIssuesList || [];
+      if (list.length === 0 && (r.mobile?.fontSizeIssues || 0) > 0) {
+        html = emptyMessage();
+      } else {
+        html = renderTable(['Tag', 'Text Content', 'Size'], list.map(i => [i.tag, i.text, i.size]));
+      }
+    } else if (type === 'mixedContent') {
+      tLabel = 'Güvensiz (Mixed) İçerik Listesi';
+      html = renderTable(['URL'], (r.security?.mixedContent || []).map(url => [url]));
+    } else if (type === 'images') {
+      tLabel = 'Tüm Görsel Sorunları';
+      const altList = (r.images?.imagesWithoutAltList || []);
+      const dimList = (r.images?.imagesWithoutDimensionsList || []);
+      if (altList.length === 0 && dimList.length === 0 && (r.images?.totalImages || 0) > 0) {
+        html = emptyMessage();
+      } else {
+        html = renderTable(['Sorun', 'Görsel URL'], [
+          ...altList.map(u => [`❌ Alt Eksik`, u]),
+          ...dimList.map(u => [`📐 Boyut Eksik`, u])
+        ]);
+      }
+    } else if (type === 'links' || type === 'ariaLabels') {
+      tLabel = 'Erişilebilirlik ve Bağlantı Hataları';
+      const list = r.links?.missingAriaLabelsList || [];
+      if (list.length === 0 && (r.links?.missingAriaLabels || 0) > 0) {
+        html = emptyMessage();
+      } else {
+        html = renderTable(['Tag', 'Selector'], list.map(i => [i.tag, `<code style="font-size:11px">${i.selector}</code>`]));
+      }
+    }
+
+    if (!html) html = '<div style="padding:40px; text-align:center; color:var(--text-muted)">Detay bulunamadı veya liste boş.</div>';
+    
+    title.innerText = tLabel;
+    container.innerHTML = html;
+    modal.classList.add('active');
+  }
+
+  function renderTable(headers, rows) {
+    return `<table class="details-table">
+      <thead><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr></thead>
+      <tbody>${rows.map(row => `<tr>${row.map(cell => `<td>${cell}</td>`).join('')}</tr>`).join('')}</tbody>
+    </table>`;
+  }
+
+  function emptyMessage() {
+    return `<div class="empty-detail">
+      <div style="font-size:24px; margin-bottom:10px;">💾</div>
+      <b>Eski Veri Tespit Edildi</b><br>
+      Bu audit dosyası detaylı raporlama özelliği eklenmeden önce kaydedilmiştir.<br>
+      Güncel detayları görmek için lütfen yeni bir tarama başlatın.
+    </div>`;
+  }
+
+  function closeDetails() {
+    document.getElementById('detailsModal').classList.remove('active');
   }
 
   function gaugeHTML(pct, label, color) {
@@ -1111,7 +1300,11 @@
   }
 
   function overviewCard(label, icon, value, sub, grade) {
-    return `<div class="score-card ${grade}">
+    let clickable = '';
+    if (label === 'IMAGES' && parseInt(value) > 0) clickable = 'onclick="showDetails(\'images\')" style="cursor:pointer"';
+    if (label === 'LINKS') clickable = 'onclick="showDetails(\'links\')" style="cursor:pointer"';
+    
+    return `<div class="score-card ${grade}" ${clickable}>
       <div class="card-header"><span class="card-label">${label}</span><span class="card-icon">${icon}</span></div>
       <div class="card-value">${value}</div>
       <div class="card-sub">${sub}</div>
@@ -1159,7 +1352,7 @@
       <div class="stat-row"><span class="stat-label">HTTPS Bağlantısı</span><span class="stat-value">${s.isHttps ? '✅' : '❌'}</span></div>
       <div class="stat-row"><span class="stat-label">HSTS Aktif</span><span class="stat-value">${s.hsts ? '✅' : '❌'}</span></div>
       <div class="stat-row"><span class="stat-label">X-Frame-Options</span><span class="stat-value"><span class="tag">${s.xFrameOptions || 'Yok'}</span></span></div>
-      <div class="stat-row"><span class="stat-label">Mixed Content</span><span class="stat-value">${badge((s.mixedContent||[]).length, 0, 0)}</span></div>
+      <div class="stat-row"><span class="stat-label">Mixed Content</span><span class="stat-value">${badge((s.mixedContent||[]).length, 0, 0, 'mixedContent')}</span></div>
     </div>`;
   }
 
@@ -1190,7 +1383,7 @@
       <div class="ai-grade ${gc}">${ai.grade || '—'}</div>
       <div style="text-align:center;margin-bottom:20px;font-size:13px;color:var(--text-muted)">${ai.overallPercentage || 0} / 100 puan</div>
       <div class="stat-row"><span class="stat-label">llms.txt</span><span class="stat-value">${llms['llms.txt']?.exists ? '✅ Mevcut' : '❌ Yok'}</span></div>
-      <div class="stat-row"><span class="stat-label">llms-full.txt</span><span class="stat-value">${llms['llms-full.txt']?.exists ? '✅ Mevcut' : '❌ Yok'}</span></div>
+
       <div style="margin:16px 0">
         <div style="font-size:12px;color:var(--text-muted);margin-bottom:6px">Alıntılanabilirlik (${cite.score||0}/${cite.maxScore||5})</div>
         ${miniBar(citeP, scoreColor(citeP))}
@@ -1238,10 +1431,10 @@
       <div class="stat-row"><span class="stat-label">LCP</span><span class="stat-value">${p.lcp ? Math.round(p.lcp)+'ms' : '—'}</span></div>
       <div class="stat-row"><span class="stat-label">INP (Simulated)</span><span class="stat-value">${p.inp != null ? p.inp+'ms' : '—'}</span></div>
       <div class="stat-row"><span class="stat-label">CLS</span><span class="stat-value">${p.cls != null ? p.cls : '—'}</span></div>
-      <div class="stat-row"><span class="stat-label">Long Tasks</span><span class="stat-value">${(p.longTasks||[]).length}</span></div>
-      <div class="stat-row"><span class="stat-label">Render Blocking</span><span class="stat-value">${badge((p.renderBlockingResources||[]).length, 5, 15)}</span></div>
-      <div class="stat-row"><span class="stat-label">Unused CSS</span><span class="stat-value">${p.unusedCssPercent != null ? p.unusedCssPercent+'%' : '—'}</span></div>
-      <div class="stat-row"><span class="stat-label">Unused JS</span><span class="stat-value">${p.unusedJsPercent != null ? p.unusedJsPercent+'%' : '—'}</span></div>
+      <div class="stat-row"><span class="stat-label">Long Tasks</span><span class="stat-value">${badge(p.longTasks?.length || 0, 0, 0, 'longTasks')}</span></div>
+      <div class="stat-row"><span class="stat-label">Render Blocking</span><span class="stat-value">${badge((p.renderBlockingResources||[]).length, 5, 15, 'renderBlocking')}</span></div>
+      <div class="stat-row"><span class="stat-label">Unused CSS</span><span class="stat-value">${badge(p.unusedCssPercent || 0, 20, 50, 'unusedCss')}%</span></div>
+      <div class="stat-row"><span class="stat-label">Unused JS</span><span class="stat-value">${badge(p.unusedJsPercent || 0, 20, 50, 'unusedJs')}%</span></div>
       <div class="stat-row"><span class="stat-label">SSR/CSR Farkı</span><span class="stat-value">${rendering.similarityScore != null ? rendering.similarityScore+'%' : '—'} ${rendering.renderDifference ? '⚠️' : '✅'}</span></div>
     </div>`;
   }
@@ -1256,7 +1449,7 @@
       <div class="stat-row"><span class="stat-label">Pagination (Next/Prev)</span><span class="stat-value"><span class="tag">${l.relNext?'Var':'Yok'}</span> <span class="tag">${l.relPrev?'Var':'Yok'}</span></span></div>
       <div class="stat-row"><span class="stat-label">Infinite Scroll Verisi</span><span class="stat-value">${l.hasInfiniteScroll ? '✅ Tespit Edildi' : '❌ Yok'}</span></div>
       <div class="stat-row"><span class="stat-label">Hreflang</span><span class="stat-value">${(l.hreflangTags||[]).length > 0 ? (l.hreflangTags||[]).map(t=>`<span class="tag">${t.lang}</span>`).join('') : '—'}</span></div>
-      <div class="stat-row"><span class="stat-label">ARIA Label / Tab Order Hataları</span><span class="stat-value">${badge(l.missingAriaLabels||0, 5, 20)} / ${badge(l.tabOrderIssues||0, 0, 5)}</span></div>
+      <div class="stat-row"><span class="stat-label">ARIA Label / Tab Order Hataları</span><span class="stat-value">${badge(l.missingAriaLabels||0, 0, 5, 'ariaLabels')} / ${badge(l.tabOrderIssues||0, 0, 5)}</span></div>
     </div>`;
   }
 
@@ -1267,11 +1460,11 @@
       <div class="panel-title">📱 Mobil & Görsel</div>
       <div class="stat-row"><span class="stat-label">Viewport Overflow</span><span class="stat-value">${badge(!m.viewportOverflow)}</span></div>
       <div class="stat-row"><span class="stat-label">Yatay Scroll</span><span class="stat-value">${badge(!m.horizontalScroll)}</span></div>
-      <div class="stat-row"><span class="stat-label">Küçük Tap Target (Mobil)</span><span class="stat-value">${badge(m.smallTapTargets||0, 10, 30)}</span></div>
-      <div class="stat-row"><span class="stat-label">Font Boyutu Sorunları</span><span class="stat-value">${badge(m.fontSizeIssues||0, 0, 10)}</span></div>
+      <div class="stat-row"><span class="stat-label">Küçük Tap Target (Mobil)</span><span class="stat-value">${badge(m.smallTapTargets || 0, 5, 15, 'smallTapTargets')}</span></div>
+      <div class="stat-row"><span class="stat-label">Font Boyutu Sorunları</span><span class="stat-value">${badge(m.fontSizeIssues || 0, 0, 10, 'fontSizeIssues')}</span></div>
       <div class="stat-row"><span class="stat-label">Toplam Görsel</span><span class="stat-value">${imgs.totalImages||0}</span></div>
-      <div class="stat-row"><span class="stat-label">Alt Eksik</span><span class="stat-value">${badge(imgs.imagesWithoutAlt||0, 0, 5)}</span></div>
-      <div class="stat-row"><span class="stat-label">Boyut Eksik</span><span class="stat-value">${badge(imgs.imagesWithoutDimensions||0, 0, 5)}</span></div>
+      <div class="stat-row"><span class="stat-label">Alt Eksik</span><span class="stat-value">${badge(imgs.imagesWithoutAlt || 0, 0, 5, 'imagesWithoutAlt')}</span></div>
+      <div class="stat-row"><span class="stat-label">Boyut Eksik</span><span class="stat-value">${badge(imgs.imagesWithoutDimensions || 0, 0, 5, 'imagesWithoutDimensions')}</span></div>
       <div class="stat-row"><span class="stat-label">Lazy Loaded</span><span class="stat-value">${imgs.lazyLoadedImages||0}</span></div>
     </div>`;
   }

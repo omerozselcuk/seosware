@@ -3,11 +3,13 @@ const { launchMobileBrowser, WAIT_AFTER_LOAD } = require("../utils/browser");
 async function auditMobile(url, TIMEOUT) {
   const mobileResult = {
     smallTapTargets: 0,
+    smallTapTargetsList: [],
     fontSizeIssues: 0,
+    fontSizeIssuesList: [],
     horizontalScroll: false,
     viewportOverflow: false,
-    mobileTitle: null,
-    mobileH1: [],
+    title: null,
+    h1: [],
     error: null
   };
 
@@ -20,26 +22,46 @@ async function auditMobile(url, TIMEOUT) {
       const title = document.title || null;
       const h1 = Array.from(document.querySelectorAll("h1")).map((el) => el.innerText.trim());
 
-      let smallTapTargets = 0;
+      const smallTapTargetsList = [];
       const interactiveElements = document.querySelectorAll("button, a, input, select, textarea");
       interactiveElements.forEach((el) => {
         const rect = el.getBoundingClientRect();
         if (rect.width > 0 && rect.height > 0 && (rect.width < 44 || rect.height < 44)) {
-          smallTapTargets++;
+          smallTapTargetsList.push({
+            tag: el.tagName.toLowerCase(),
+            text: (el.innerText || el.placeholder || "").trim().substring(0, 30) || "(no text)",
+            selector: (el.id ? "#" + el.id : "") + (el.className ? "." + el.className.split(" ").join(".") : "")
+          });
         }
       });
 
-      let fontSizeIssues = 0;
+      const fontSizeIssuesList = [];
       const textElements = document.querySelectorAll("p, span, li, td, th, a");
       textElements.forEach((el) => {
-        const fontSize = parseFloat(window.getComputedStyle(el).fontSize);
-        if (fontSize < 12 && el.innerText?.trim().length > 0) fontSizeIssues++;
+        const style = window.getComputedStyle(el);
+        const fontSize = parseFloat(style.fontSize);
+        if (fontSize < 12 && el.innerText?.trim().length > 0) {
+          fontSizeIssuesList.push({
+            tag: el.tagName.toLowerCase(),
+            text: el.innerText.trim().substring(0, 50),
+            size: fontSize + "px"
+          });
+        }
       });
 
       const horizontalScroll = document.documentElement.scrollWidth > window.innerWidth;
       const viewportOverflow = document.body.scrollWidth > window.innerWidth;
 
-      return { title, h1, smallTapTargets, fontSizeIssues, horizontalScroll, viewportOverflow };
+      return { 
+        title, 
+        h1, 
+        smallTapTargets: smallTapTargetsList.length, 
+        smallTapTargetsList,
+        fontSizeIssues: fontSizeIssuesList.length, 
+        fontSizeIssuesList,
+        horizontalScroll, 
+        viewportOverflow 
+      };
     });
 
     Object.assign(mobileResult, mobileData);

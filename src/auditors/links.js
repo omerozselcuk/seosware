@@ -24,7 +24,7 @@ async function auditLinks(page) {
         const linkUrl = new URL(href, window.location.origin);
         if (linkUrl.hostname === currentHost || linkUrl.hostname.endsWith("." + currentHost)) {
           totalInternalLinks++;
-          internalLinkUrls.push(linkUrl.href); // Might be huge, but keeping for compatibility
+          internalLinkUrls.push(linkUrl.href);
         } else {
           totalExternalLinks++;
           if (link.target === "_blank" && !link.getAttribute("rel")?.includes("noopener")) {
@@ -35,7 +35,6 @@ async function auditLinks(page) {
       if (link.target === "_blank") linksWithTargetBlank++;
     });
 
-    // Sub-set of links: Pagination and Accessibility
     const relNextEl = document.querySelector('link[rel="next"]');
     const relPrevEl = document.querySelector('link[rel="prev"]');
     const relNext = relNextEl ? relNextEl.href : null;
@@ -47,7 +46,6 @@ async function auditLinks(page) {
       document.querySelector("[infinite-scroll]")
     );
 
-    // Hreflang
     const hreflangTags = Array.from(document.querySelectorAll('link[rel="alternate"][hreflang]')).map(
       (el) => ({ lang: el.hreflang, href: el.href })
     );
@@ -55,28 +53,45 @@ async function auditLinks(page) {
 
     // Accessibility
     const interactiveElements = document.querySelectorAll("button, a, input, select, textarea");
-    let missingAriaLabels = 0;
-    let smallTapTargets = 0;
-
+    const missingAriaLabelsList = [];
     interactiveElements.forEach((el) => {
       const hasLabel =
         el.getAttribute("aria-label") ||
         el.getAttribute("aria-labelledby") ||
         el.getAttribute("title") ||
         el.innerText?.trim();
-      if (!hasLabel) missingAriaLabels++;
-
-      const rect = el.getBoundingClientRect();
-      if (rect.width > 0 && rect.height > 0 && (rect.width < 44 || rect.height < 44)) {
-        smallTapTargets++;
+      if (!hasLabel) {
+        missingAriaLabelsList.push({
+          tag: el.tagName.toLowerCase(),
+          selector: (el.id ? "#" + el.id : "") + (el.className ? "." + el.className.split(" ").join(".") : "")
+        });
       }
     });
 
     const tabbables = Array.from(document.querySelectorAll("[tabindex]"));
-    let tabOrderIssues = 0;
+    const tabOrderIssuesList = [];
     tabbables.forEach((el) => {
       const idx = parseInt(el.getAttribute("tabindex"));
-      if (idx > 0) tabOrderIssues++;
+      if (idx > 0) {
+        tabOrderIssuesList.push({
+          tag: el.tagName.toLowerCase(),
+          tabindex: idx,
+          selector: (el.id ? "#" + el.id : "") + (el.className ? "." + el.className.split(" ").join(".") : "")
+        });
+      }
+    });
+
+    const rectElements = document.querySelectorAll("button, a, input, select, textarea");
+    const smallTapTargetsList = [];
+    rectElements.forEach((el) => {
+        const rect = el.getBoundingClientRect();
+        if (rect.width > 0 && rect.height > 0 && (rect.width < 44 || rect.height < 44)) {
+          smallTapTargetsList.push({
+            tag: el.tagName.toLowerCase(),
+            text: el.innerText?.trim().substring(0, 30) || "(no text)",
+            selector: (el.id ? "#" + el.id : "") + (el.className ? "." + el.className.split(" ").join(".") : "")
+          });
+        }
     });
 
     return {
@@ -92,9 +107,12 @@ async function auditLinks(page) {
       hasInfiniteScroll,
       hreflangTags,
       hreflangSelfRef,
-      missingAriaLabels,
-      smallTapTargets,
-      tabOrderIssues
+      missingAriaLabels: missingAriaLabelsList.length,
+      missingAriaLabelsList,
+      smallTapTargets: smallTapTargetsList.length,
+      smallTapTargetsList,
+      tabOrderIssues: tabOrderIssuesList.length,
+      tabOrderIssuesList
     };
   });
 }

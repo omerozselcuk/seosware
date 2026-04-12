@@ -15,7 +15,7 @@ const AI_BOTS = [
 // ─── 1. /llms.txt & /llms-full.txt Kontrolü ────────────────────────
 
 async function checkLlmsTxt(page, origin, timeout) {
-  const files = ["llms.txt", "llms-full.txt"];
+  const files = ["llms.txt"];
   const results = {};
 
   for (const file of files) {
@@ -714,11 +714,11 @@ async function auditAISearch(page, url, timeout) {
 
   // llms.txt: her dosya varsa +3, spec uygunsa +2 = max 10
   if (result.llmsTxt && !result.llmsTxt.error) {
-    for (const file of ["llms.txt", "llms-full.txt"]) {
+    for (const file of ["llms.txt"]) {
       const f = result.llmsTxt[file];
       if (f?.exists) {
-        totalScore += 3;
-        if (f.spec.hasH1 && f.spec.hasBlockquote && f.spec.isMarkdown) totalScore += 2;
+        totalScore += 6;
+        if (f.spec.hasH1 && f.spec.hasBlockquote && f.spec.isMarkdown) totalScore += 4;
       }
     }
   }

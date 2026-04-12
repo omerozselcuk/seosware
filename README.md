@@ -20,7 +20,7 @@ Seosware crawls your pages with a real Chromium browser, extracts 100+ SEO signa
 - **Security** — HTTPS, HSTS, X-Frame-Options, mixed content, large files
 
 ### 🤖 AI Search Readiness
-- **`/llms.txt` & `/llms-full.txt`** — Existence and spec compliance (H1, blockquote, markdown format)
+- **`/llms.txt`** — Existence and spec compliance (H1, blockquote, markdown format)
 - **Bot Blocking Check** — Validates if ClaudeBot, GPTBot, or CCBot are blocked by `robots.txt` or headers
 - **Readability Grade** — Overall letter grade (A+ to F) for AI accessibility
 

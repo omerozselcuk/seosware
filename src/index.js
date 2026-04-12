@@ -8,6 +8,7 @@ const { auditPerformance } = require('./auditors/performance');
 const { auditRendering } = require('./auditors/rendering');
 const { auditMobile } = require('./auditors/mobile');
 const { auditAISearch } = require('./auditors/ai-search-auditor');
+const { auditFrontend } = require('./auditors/frontend-auditor');
 
 async function runAudit(url, config = {}) {
   const TIMEOUT = config.timeout || 30000;
@@ -41,6 +42,7 @@ async function runAudit(url, config = {}) {
     rendering: null,
     mobile: null,
     aiSearch: null,
+    frontend: null,
     robots: { blocked: false }
   };
 
@@ -148,6 +150,10 @@ async function runAudit(url, config = {}) {
     // 4. AI Search Audit
     console.log(`[\u2139] Running AI Search audit for: ${url}`);
     result.aiSearch = await auditAISearch(page, url, TIMEOUT);
+
+    // 5. Frontend Quality Audit
+    console.log(`[\u2139] Running Frontend audit for: ${url}`);
+    result.frontend = await auditFrontend(page, url);
 
     await page.close();
     await context.close();

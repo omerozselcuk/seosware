@@ -1326,6 +1326,159 @@
       ${buildPerformancePanel(r)}
       ${buildLinksPanel(r)}
       ${buildMobilePanel(r)}
+      ${buildFrontendPanel(r)}
+    </div>`;
+  }
+
+  // ─── FRONTEND QUALITY PANEL ───
+  function buildFrontendPanel(r) {
+    const fe = r.frontend;
+    if (!fe || fe.error) {
+      return `<div class="detail-panel"><div class="panel-title">🎨 Frontend Kalitesi</div><div style="font-size:13px;color:var(--text-muted);padding:16px 0">Frontend analizi mevcut değil${fe?.error ? ': ' + fe.error : ''}.</div></div>`;
+    }
+
+    const cats = fe.categories || {};
+    const gradeColor = g => ({'A':'var(--green)','B':'var(--cyan)','C':'var(--yellow)','D':'var(--orange)','E':'var(--red)','F':'var(--red)'}[g] || 'var(--text-muted)');
+
+    const categoryRow = (label, icon, cat) => {
+      if (!cat) return '';
+      const color = gradeColor(cat.grade);
+      return `<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:rgba(0,0,0,0.2);border-radius:8px;margin-bottom:6px">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-size:16px">${icon}</span>
+          <span style="font-size:13px;color:var(--text-secondary)">${label}</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px">
+          <span style="font-size:11px;color:var(--text-muted)">${cat.score}/100</span>
+          <span style="font-weight:700;color:${color};font-size:16px;min-width:20px;text-align:center">${cat.grade}</span>
+        </div>
+      </div>`;
+    };
+
+    const metricRows = (cat, pairs) => {
+      if (!cat || !cat.metrics) return '';
+      const m = cat.metrics;
+      return pairs.map(([label, key, suffix]) => {
+        const val = m[key];
+        if (val === undefined || val === null) return '';
+        return `<div class="stat-row"><span class="stat-label" style="font-size:12px">${label}</span><span class="stat-value" style="font-size:12px">${val}${suffix||''}</span></div>`;
+      }).join('');
+    };
+
+    const globalColor = gradeColor(fe.globalGrade);
+
+    return `<div class="detail-panel" style="grid-column: span 2">
+      <div class="panel-title">🎨 Frontend Kalitesi
+        <span style="margin-left:auto;font-size:22px;font-weight:800;color:${globalColor}">${fe.globalGrade}</span>
+        <span style="font-size:12px;color:var(--text-muted);font-weight:400;margin-left:6px">${fe.globalScore}/100</span>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+
+        <div>
+          ${categoryRow('Page Weight', '⚖️', cats.pageWeight)}
+          ${cats.pageWeight ? metricRows(cats.pageWeight, [
+            ['Toplam Ağırlık', 'totalKb', ' KB'],
+            ['JS', 'jsKb', ' KB'],
+            ['CSS', 'cssKb', ' KB'],
+            ['Görsel', 'imageKb', ' KB'],
+            ['Font', 'fontKb', ' KB'],
+            ['Büyük Görseller', 'oversizedImages', ''],
+            ['Sıkıştırılmamış', 'uncompressedKb', ' KB'],
+          ]) : ''}
+        </div>
+
+        <div>
+          ${categoryRow('Requests', '🔄', cats.requests)}
+          ${cats.requests ? metricRows(cats.requests, [
+            ['Toplam İstek', 'totalRequests', ''],
+            ['Farklı Domain', 'domains', ''],
+            ['3rd Party', 'thirdPartyDomains', ''],
+            ['404 Hata', 'notFound', ''],
+            ['Boş İstek', 'emptyRequests', ''],
+            ['Fold Altı Görsel', 'belowFoldImages', ''],
+            ['Gizli Görsel', 'hiddenImages', ''],
+          ]) : ''}
+        </div>
+
+        <div>
+          ${categoryRow('DOM Complexity', '🌿', cats.domComplexity)}
+          ${cats.domComplexity ? metricRows(cats.domComplexity, [
+            ['DOM Elementleri', 'totalElements', ''],
+            ['Maks. Derinlik', 'maxDepth', ''],
+            ['iframe Sayısı', 'iframes', ''],
+            ['Tekrarlanan ID', 'duplicatedIds', ''],
+          ]) : ''}
+        </div>
+
+        <div>
+          ${categoryRow('JS Complexity', '⚡', cats.jsComplexity)}
+          ${cats.jsComplexity ? metricRows(cats.jsComplexity, [
+            ['JS Exec Süresi', 'execTimeMs', ' ms'],
+            ['DOM Erişimi', 'domAccess', ''],
+            ['Scroll Listener', 'scrollListeners', ''],
+            ['Global Değişken', 'globalVariables', ''],
+          ]) : ''}
+        </div>
+
+        <div>
+          ${categoryRow('Bad JS', '🚨', cats.badJs)}
+          ${cats.badJs ? metricRows(cats.badJs, [
+            ['JS Hataları', 'jsErrors', ''],
+            ['document.write', 'documentWriteCalls', ''],
+            ['Sync XHR', 'syncXmlHttpRequests', ''],
+            ['Console Uyarı', 'consoleWarnings', ''],
+          ]) : ''}
+        </div>
+
+        <div>
+          ${categoryRow('CSS Complexity', '🎨', cats.cssComplexity)}
+          ${cats.cssComplexity ? metricRows(cats.cssComplexity, [
+            ['Toplam Kural', 'totalRules', ''],
+            ['Karmaşık Seçici', 'complexSelectors', ''],
+            ['Renk Sayısı', 'uniqueColors', ''],
+            ['Benzer Renkler', 'similarColors', ''],
+            ['Breakpoint', 'breakpoints', ''],
+            ['Max-Width Sorgu', 'notMobileFirstQueries', ''],
+          ]) : ''}
+        </div>
+
+        <div>
+          ${categoryRow('Bad CSS', '🩹', cats.badCss)}
+          ${cats.badCss ? metricRows(cats.badCss, [
+            ['Sözdizim Hatası', 'syntaxErrors', ''],
+            ['@import', 'atImport', ''],
+            ['Dup. Seçici', 'duplicatedSelectors', ''],
+            ['Dup. Özellik', 'duplicatedProperties', ''],
+            ['Boş Kural', 'emptyRules', ''],
+            ['!important', 'importantUsage', ''],
+            ['Eski Prefix', 'oldPrefixes', ''],
+            ['Gereksiz body', 'redundantBodySelectors', ''],
+          ]) : ''}
+        </div>
+
+        <div>
+          ${categoryRow('Server Config', '🖥️', cats.serverConfig)}
+          ${cats.serverConfig ? metricRows(cats.serverConfig, [
+            ['HTTP/1.1 Kaynak', 'http1Resources', ''],
+            ['Cachesiz Kaynak', 'noCacheResources', ''],
+            ['Cache Devre Dışı', 'cachingDisabled', ''],
+            ['Cache Çok Kısa', 'cachingTooShort', ''],
+            ['Bağlantı Kapandı', 'connectionsClosed', ''],
+          ]) : ''}
+        </div>
+
+        <div>
+          ${categoryRow('Web Fonts', '🔤', cats.webFonts)}
+          ${cats.webFonts ? metricRows(cats.webFonts, [
+            ['Font Sayısı', 'webfontCount', ''],
+            ['Toplam Font KB', 'totalFontKb', ' KB'],
+            ['WOFF2 Dışı', 'nonWoff2Count', ''],
+            ['Büyük Font', 'overweightFonts', ''],
+          ]) : ''}
+        </div>
+
+      </div>
     </div>`;
   }
 

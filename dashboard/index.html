@@ -763,6 +763,106 @@
     justify-content: space-between;
     border: 1px solid rgba(255,255,255,0.1);
   }
+
+    /* AI Modal */
+    .ai-modal-overlay {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100vw; height: 100vh;
+      background: rgba(0,0,0,0.85);
+      backdrop-filter: blur(12px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 2000;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+    }
+    .ai-modal-overlay.open {
+      opacity: 1;
+      pointer-events: all;
+    }
+    .ai-modal-content {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      width: 92%;
+      max-width: 960px;
+      max-height: 88vh;
+      border-radius: var(--radius);
+      overflow-y: auto;
+      position: relative;
+      padding: 40px;
+      box-shadow: 0 25px 60px -12px rgba(0,0,0,0.6);
+    }
+    .ai-modal-close {
+      position: absolute;
+      top: 18px; right: 18px;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid var(--border);
+      color: white;
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      font-weight: bold;
+      transition: background 0.2s;
+    }
+    .ai-modal-close:hover {
+      background: rgba(255,255,255,0.15);
+    }
+    .ai-report h2 {
+      color: var(--accent);
+      margin-top: 32px;
+      margin-bottom: 16px;
+      font-size: 20px;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+      padding-bottom: 8px;
+    }
+    .ai-report h2:first-child { margin-top: 0; }
+    .ai-report p { margin-bottom: 16px; color: #cbd5e1 !important; }
+    .ai-report table { width: 100%; border-collapse: collapse; margin-bottom: 24px; font-size: 14px; background: rgba(0,0,0,0.2) !important; }
+    .ai-report th { text-align: left; padding: 12px; background: rgba(255,255,255,0.08) !important; color: #e2e8f0 !important; border-bottom: 1px solid var(--border); font-weight: 600; }
+    .ai-report td { padding: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); color: #cbd5e1 !important; }
+    .ai-report tr:hover td { background: rgba(255,255,255,0.04); }
+    .ai-report ul, .ai-report ol { margin-bottom: 16px; padding-left: 20px; color: #cbd5e1 !important; }
+    .ai-report li { margin-bottom: 6px; color: #cbd5e1 !important; }
+    .ai-report strong, .ai-report b { color: #f1f5f9 !important; }
+    /* Force all text inside AI report to be readable on dark bg */
+    .ai-report, .ai-report * { color: #cbd5e1; }
+    .ai-report h1, .ai-report h2, .ai-report h3, .ai-report h4, .ai-report h5, .ai-report h6 { color: var(--accent) !important; }
+    .ai-report span, .ai-report div, .ai-report a { color: #cbd5e1 !important; }
+    .ai-report a { color: var(--accent-light) !important; text-decoration: underline; }
+    .ai-report code, .ai-report pre { color: #e2e8f0 !important; background: rgba(0,0,0,0.3) !important; padding: 2px 6px; border-radius: 4px; font-size: 13px; }
+    .ai-report blockquote { border-left: 3px solid var(--accent); padding-left: 16px; color: #94a3b8 !important; margin: 16px 0; }
+    .ai-report em, .ai-report i { color: #94a3b8 !important; }
+    .ai-report caption { color: #94a3b8 !important; }
+    /* Override any inline color/background styles Gemini might inject */
+    .ai-report [style*="color"] { color: #cbd5e1 !important; }
+    .ai-report h2[style*="color"] { color: var(--accent) !important; }
+    .ai-report th[style*="color"] { color: #e2e8f0 !important; }
+    .ai-report th[style*="background"], .ai-report thead[style*="background"] { background: rgba(255,255,255,0.08) !important; }
+    .ai-report td[style*="background"] { background: transparent !important; }
+    .ai-report tr[style*="background"] { background: transparent !important; }
+    .ai-report table[style*="background"] { background: rgba(0,0,0,0.2) !important; }
+    .ai-report [style*="border"] { border-color: rgba(255,255,255,0.1) !important; }
+    .btn-ai {
+      background: linear-gradient(135deg, #7c3aed, #a855f7);
+      color: white;
+      box-shadow: 0 4px 16px rgba(124, 58, 237, 0.3);
+    }
+    .btn-ai:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 24px rgba(124, 58, 237, 0.4);
+    }
+    @keyframes aiPulse {
+      0% { transform: scale(1); opacity: 0.8; }
+      50% { transform: scale(1.15); opacity: 1; }
+      100% { transform: scale(1); opacity: 0.8; }
+    }
 </style>
 </head>
 <body>
@@ -857,7 +957,10 @@
   <section class="results-section" id="resultsSection">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; gap:16px;">
       <div class="results-tabs" id="resultsTabs" style="margin-bottom:0; flex:1; overflow-x:auto;"></div>
-      <button class="btn btn-outline" id="jsonDownloadBtn" onclick="downloadResultsJson()" style="flex-shrink:0; padding:8px 16px; font-size:12px; border-color:var(--accent); color:var(--accent); display:none;">📥 JSON İndir</button>
+      <div style="display:flex; gap:8px; flex-shrink:0;">
+        <button class="btn btn-ai" id="aiAnalyzeBtn" onclick="openAdhocAiInsight()" style="padding:8px 16px; font-size:12px; display:none;">🤖 AI ile Yorumla</button>
+        <button class="btn btn-outline" id="jsonDownloadBtn" onclick="downloadResultsJson()" style="padding:8px 16px; font-size:12px; border-color:var(--accent); color:var(--accent); display:none;">📥 JSON İndir</button>
+      </div>
     </div>
     <div id="resultsContent"></div>
   </section>
@@ -1070,6 +1173,7 @@
     document.getElementById('emptyState').style.display = 'none';
     document.getElementById('resultsSection').classList.add('active');
     document.getElementById('jsonDownloadBtn').style.display = 'inline-flex';
+    document.getElementById('aiAnalyzeBtn').style.display = 'inline-flex';
 
     // Tabs
     const tabs = document.getElementById('resultsTabs');
@@ -1702,7 +1806,93 @@
       } catch {}
     }
   };
+
+  // ─── AD-HOC AI INSIGHT ───
+  async function openAdhocAiInsight() {
+    const modal = document.getElementById('adhocAiModal');
+    const loading = document.getElementById('adhocAiLoading');
+    const reportBox = document.getElementById('adhocAiReportBox');
+
+    modal.classList.add('open');
+    loading.style.display = 'block';
+    reportBox.innerHTML = '';
+    document.querySelectorAll('.adhoc-pdf-btn').forEach(b => b.style.display = 'none');
+
+    try {
+      const res = await fetch('/api/adhoc/insight', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ results })
+      });
+      const data = await res.json();
+
+      loading.style.display = 'none';
+      if (data.error) {
+        reportBox.innerHTML = `<div style="color:var(--red); padding:20px; border:1px solid var(--red); border-radius:8px;">
+          <h3>⚠️ Hata</h3>
+          <p>${data.error}</p>
+        </div>`;
+      } else {
+        reportBox.innerHTML = data.html;
+        document.querySelectorAll('.adhoc-pdf-btn').forEach(b => b.style.display = 'block');
+      }
+    } catch (e) {
+      loading.style.display = 'none';
+      reportBox.innerHTML = '<div style="color:var(--red); padding:20px;">Bir hata oluştu: ' + e.message + '</div>';
+    }
+  }
+
+  function closeAdhocAiModal() {
+    document.getElementById('adhocAiModal').classList.remove('open');
+    document.querySelectorAll('.adhoc-pdf-btn').forEach(b => b.style.display = 'none');
+  }
+
+  function downloadAdhocAiPdf() {
+    const element = document.getElementById('adhocAiReportBox');
+    const dateStr = new Date().toISOString().split('T')[0];
+    const filename = `Seosware-AI-Raporu-AdHoc-${dateStr}.pdf`.replace(/\s+/g, '-');
+
+    if (typeof html2pdf === 'undefined') {
+      alert('PDF kütüphanesi yükleniyor, lütfen tekrar deneyin.');
+      return;
+    }
+
+    html2pdf().set({
+      margin: 10,
+      filename: filename,
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { scale: 2, useCORS: true, backgroundColor: '#0f172a' },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    }).from(element).save();
+  }
 </script>
 
+<!-- AI Insight Modal for Ad-Hoc Scans -->
+<div class="ai-modal-overlay" id="adhocAiModal">
+  <div class="ai-modal-content">
+    <button class="ai-modal-close" onclick="closeAdhocAiModal()">✕</button>
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:24px;">
+      <div style="display:flex; align-items:center; gap: 14px;">
+        <div style="font-size:36px;">✨</div>
+        <div>
+          <h2 style="margin:0; font-size:22px;">Yapay Zeka Teknik Denetim Raporu</h2>
+          <p style="color:var(--text-muted); margin:4px 0 0; font-size:13px;">Gemini 2.5 Flash tarafından oluşturuldu</p>
+        </div>
+      </div>
+      <button class="btn btn-primary adhoc-pdf-btn" style="display:none; padding: 8px 16px; font-size: 13px;" onclick="downloadAdhocAiPdf()">📄 PDF İndir</button>
+    </div>
+    <div id="adhocAiLoading" style="display:none; text-align:center; padding: 48px 20px;">
+      <div style="font-size:48px; animation: aiPulse 1.5s infinite;">🤖</div>
+      <p style="margin-top:20px; color:var(--text-secondary); font-size:15px;">Audit verileri Gemini'ye gönderildi...</p>
+      <p style="color:var(--text-muted); font-size:13px;">Kapsamlı teknik analiz raporu hazırlanıyor. Bu işlem 15-30 saniye sürebilir.</p>
+    </div>
+    <div id="adhocAiReportBox" class="ai-report"></div>
+    <div class="adhoc-pdf-btn" style="display:none; margin-top:32px; padding-top:24px; border-top:1px solid var(--border); text-align:right;">
+      <button class="btn btn-primary" onclick="downloadAdhocAiPdf()">📄 PDF Olarak İndir</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 </body>
 </html>

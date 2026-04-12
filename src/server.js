@@ -9,7 +9,7 @@ const { generateInsight } = require('./utils/ai-insights');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-app.use(express.json());
+app.use(express.json({ limit: '50mb' }));
 app.use(express.static(path.join(__dirname, '..', 'dashboard')));
 
 let auditState = {
@@ -224,6 +224,25 @@ app.post('/api/projects/:id/history/:runId/insight', async (req, res) => {
     await storage.updateHistoryItem(req.params.id, req.params.runId, { aiInsight: htmlReport });
     
     res.json({ html: htmlReport, cached: false });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── AD-HOC AI INSIGHT ───
+app.post('/api/adhoc/insight', async (req, res) => {
+  try {
+    const { results: adhocResults } = req.body;
+    if (!adhocResults || !Array.isArray(adhocResults) || adhocResults.length === 0) {
+      return res.status(400).json({ error: "Analiz için sonuç verisi gerekli." });
+    }
+
+    if (!process.env.GEMINI_API_KEY) {
+      return res.status(400).json({ error: "Missing API Key: Lütfen .env dosyasına GEMINI_API_KEY ekleyin." });
+    }
+
+    const htmlReport = await generateInsight({ results: adhocResults });
+    res.json({ html: htmlReport });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

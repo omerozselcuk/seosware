@@ -10,29 +10,29 @@
 
     :root {
       --bg-primary: #0a0e1a;
-      --bg-secondary: #111827;
-      --bg-card: rgba(17, 24, 39, 0.7);
-      --bg-card-hover: rgba(31, 41, 55, 0.8);
+      --bg-secondary: #0f172a;
+      --bg-card: rgba(33, 40, 54, 0.75);
+      --bg-card-hover: rgba(45, 55, 75, 0.85);
       --bg-glass: rgba(255,255,255,0.03);
-      --border: rgba(255,255,255,0.06);
-      --border-hover: rgba(255,255,255,0.12);
-      --text-primary: #f1f5f9;
+      --border: rgba(255,255,255,0.08);
+      --border-hover: rgba(0, 246, 255, 0.3);
+      --text-primary: #f8fafc;
       --text-secondary: #94a3b8;
       --text-muted: #64748b;
-      --accent: #6366f1;
-      --accent-light: #818cf8;
-      --accent-glow: rgba(99,102,241,0.15);
-      --green: #34d399;
-      --green-bg: rgba(52,211,153,0.1);
+      --accent: #00F6FF;
+      --accent-light: #5dfaff;
+      --accent-glow: rgba(0, 246, 255, 0.2);
+      --green: #00F6FF;
+      --green-bg: rgba(0, 246, 255, 0.1);
       --yellow: #fbbf24;
       --yellow-bg: rgba(251,191,36,0.1);
-      --red: #f87171;
-      --red-bg: rgba(248,113,113,0.1);
-      --cyan: #22d3ee;
+      --red: #E83F57;
+      --red-bg: rgba(232, 63, 87, 0.1);
+      --cyan: #00F6FF;
       --orange: #fb923c;
       --radius: 16px;
       --radius-sm: 10px;
-      --shadow: 0 8px 32px rgba(0,0,0,0.3);
+      --shadow: 0 12px 40px rgba(0,0,0,0.4);
     }
 
     body {
@@ -50,9 +50,9 @@
       position: fixed;
       top: -50%; left: -50%;
       width: 200%; height: 200%;
-      background: radial-gradient(ellipse at 20% 50%, rgba(99,102,241,0.06) 0%, transparent 50%),
-                  radial-gradient(ellipse at 80% 20%, rgba(34,211,238,0.04) 0%, transparent 50%),
-                  radial-gradient(ellipse at 50% 80%, rgba(168,85,247,0.04) 0%, transparent 50%);
+      background: radial-gradient(ellipse at 20% 50%, rgba(10, 47, 124, 0.15) 0%, transparent 50%),
+                  radial-gradient(ellipse at 80% 20%, rgba(0, 246, 255, 0.1) 0%, transparent 50%),
+                  radial-gradient(ellipse at 50% 80%, rgba(232, 63, 87, 0.05) 0%, transparent 50%);
       z-index: -1;
       animation: ambientDrift 20s ease-in-out infinite;
     }
@@ -681,10 +681,19 @@
 <!-- HEADER -->
 <header class="header">
   <div class="logo">
-    <div class="logo-icon">S</div>
+    <svg width="40" height="40" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M16 26C21.5228 26 26 21.5228 26 16C26 10.4772 21.5228 6 16 6C10.4772 6 6 10.4772 6 16C6 21.5228 10.4772 26 16 26Z" stroke="url(#logo_grad)" stroke-width="3"/>
+      <path d="M11 16C11 13.2386 13.2386 11 16 11C18.7614 11 21 13.2386 21 16C21 18.7614 18.7614 21 16 21" stroke="url(#logo_grad)" stroke-width="2" stroke-linecap="round"/>
+      <defs>
+        <linearGradient id="logo_grad" x1="6" y1="6" x2="26" y2="26" gradientUnits="userSpaceOnUse">
+          <stop stop-color="#0A2F7C"/>
+          <stop offset="1" stop-color="#00F6FF"/>
+        </linearGradient>
+      </defs>
+    </svg>
     <div>
-      <div class="logo-text">Seosware</div>
-      <div class="logo-sub">Advanced SEO Auditor</div>
+      <div class="logo-text" style="font-family: 'Space Grotesk', sans-serif;">seosware</div>
+      <div class="logo-sub">advanced technical audit</div>
     </div>
   </div>
   
@@ -757,7 +766,10 @@
 
   <!-- RESULTS -->
   <section class="results-section" id="resultsSection">
-    <div class="results-tabs" id="resultsTabs"></div>
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; gap:16px;">
+      <div class="results-tabs" id="resultsTabs" style="margin-bottom:0; flex:1; overflow-x:auto;"></div>
+      <button class="btn btn-outline" id="jsonDownloadBtn" onclick="downloadResultsJson()" style="flex-shrink:0; padding:8px 16px; font-size:12px; border-color:var(--accent); color:var(--accent); display:none;">📥 JSON İndir</button>
+    </div>
     <div id="resultsContent"></div>
   </section>
 
@@ -955,6 +967,7 @@
     if (results.length === 0) return;
 
     document.getElementById('resultsSection').classList.add('active');
+    document.getElementById('jsonDownloadBtn').style.display = 'inline-flex';
 
     // Tabs
     const tabs = document.getElementById('resultsTabs');
@@ -966,8 +979,22 @@
     renderTab(0);
   }
 
+  function downloadResultsJson() {
+    if (!results || results.length === 0) return;
+    const blob = new Blob([JSON.stringify(results, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `seosware-audit-${new Date().toISOString().split('.')[0].replace(/[:T]/g, '-')}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   function safeParse(url) {
-    try { return new URL(url).hostname; } catch { return url; }
+    try { 
+      const u = new URL(url);
+      return u.pathname === '/' ? u.hostname : u.pathname;
+    } catch { return url; }
   }
 
   function switchTab(idx) {

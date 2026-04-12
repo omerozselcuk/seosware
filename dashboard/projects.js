@@ -95,8 +95,9 @@ async function loadHistory(id) {
           <td>${h.totalUrls} Sayfa</td>
           <td>
             <div style="display:flex; gap:8px;">
-              <button class="btn btn-primary" style="padding: 4px 10px; font-size: 11px;" onclick="viewHistory('${activeProjectId}', '${h.id}')">👁️ Görüntüle</button>
-              <button class="btn btn-outline" style="padding: 4px 10px; font-size: 11px;" onclick="openAiInsight('${h.id}')">🤖 AI Analiz</button>
+              <button class="btn btn-primary" style="padding: 4px 10px; font-size: 11px;" title="Görüntüle" onclick="viewHistory('${activeProjectId}', '${h.id}')">👁️</button>
+              <button class="btn btn-outline" style="padding: 4px 10px; font-size: 11px;" title="AI Analiz" onclick="openAiInsight('${h.id}')">🤖 AI</button>
+              <button class="btn btn-outline" style="padding: 4px 10px; font-size: 11px; border-color:var(--accent); color:var(--accent);" title="JSON İndir" onclick="downloadHistoryJson('${activeProjectId}', '${h.id}', '${h.timestamp}')">📥 JSON</button>
             </div>
           </td>
         </tr>
@@ -107,6 +108,28 @@ async function loadHistory(id) {
 
 function viewHistory(pId, hId) {
   window.location.href = `index.html?pId=${pId}&hId=${hId}`;
+}
+
+async function downloadHistoryJson(pId, hId, timestamp) {
+  try {
+    const res = await fetch(`/api/projects/${pId}/history/${hId}`);
+    const data = await res.json();
+    if (!data || !data.results) return alert('Veri bulunamadı.');
+    
+    // AI insight verisini de isteyip istemediğini sordum ama varsayılan olarak sonuçları indiriyoruz
+    const blob = new Blob([JSON.stringify(data.results, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    
+    const dateStr = new Date(data.timestamp || Number(timestamp)).toISOString().split('.')[0].replace(/[:T]/g, '-');
+    a.download = `seosware-project-audit-${dateStr}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  } catch (e) {
+    console.error(e);
+    alert('İndirme sırasında hata oluştu.');
+  }
 }
 
 async function compareSelected() {

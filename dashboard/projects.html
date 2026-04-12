@@ -9,18 +9,18 @@
   <style>
     /* Reuse core styles and add specific ones for Projects */
     :root {
-      --bg: #0a0e1a; var(--bg);
-      --bg-card: rgba(20, 25, 40, 0.6);
-      --bg-glass: rgba(20, 25, 40, 0.4);
+      --bg: #0a0e1a;
+      --bg-card: rgba(33, 40, 54, 0.75);
+      --bg-glass: rgba(33, 40, 54, 0.5);
       --border: rgba(255, 255, 255, 0.08);
-      --border-hover: rgba(99, 102, 241, 0.4);
-      --accent: #6366f1;
+      --border-hover: rgba(0, 246, 255, 0.3);
+      --accent: #00F6FF;
       --text-primary: #f8fafc;
       --text-secondary: #cbd5e1;
       --text-muted: #64748b;
       --radius: 16px;
-      --green: #34d399; var(--green);
-      --red: #f87171;
+      --green: #00F6FF;
+      --red: #E83F57;
       --font: 'Inter', sans-serif;
     }
     
@@ -99,8 +99,20 @@
 
 <header class="header">
   <a href="index.html" class="logo">
-    <div class="logo-icon">S</div>
-    <div class="logo-text">Seosware</div>
+    <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M16 26C21.5228 26 26 21.5228 26 16C26 10.4772 21.5228 6 16 6C10.4772 6 6 10.4772 6 16C6 21.5228 10.4772 26 16 26Z" stroke="url(#logo_grad)" stroke-width="3"/>
+      <path d="M11 16C11 13.2386 13.2386 11 16 11C18.7614 11 21 13.2386 21 16C21 18.7614 18.7614 21 16 21" stroke="url(#logo_grad)" stroke-width="2" stroke-linecap="round"/>
+      <defs>
+        <linearGradient id="logo_grad" x1="6" y1="6" x2="26" y2="26" gradientUnits="userSpaceOnUse">
+          <stop stop-color="#0A2F7C"/>
+          <stop offset="1" stop-color="#00F6FF"/>
+        </linearGradient>
+      </defs>
+    </svg>
+    <div>
+      <div class="logo-text" style="font-family: 'Space Grotesk', sans-serif;">seosware</div>
+      <div style="font-size: 10px; color: var(--text-muted); font-weight: 500; letter-spacing: 1px; text-transform: uppercase;">advanced technical audit</div>
+    </div>
   </a>
   <div class="nav-links">
     <a href="index.html" class="nav-link">Ad-Hoc Taramalar</a>

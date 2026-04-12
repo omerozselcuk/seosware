@@ -1095,6 +1095,7 @@
     document.getElementById('resultsSection').classList.remove('active');
     document.getElementById('logFeed').innerHTML = '';
     results = [];
+    adhocAiCache = null; // Clear cached AI report for new scan
 
     // SSE bağlantısı
     eventSource = new EventSource('/api/events');
@@ -1855,12 +1856,23 @@
   };
 
   // ─── AD-HOC AI INSIGHT ───
+  let adhocAiCache = null; // Cached AI report HTML for current scan
+
   async function openAdhocAiInsight() {
     const modal = document.getElementById('adhocAiModal');
     const loading = document.getElementById('adhocAiLoading');
     const reportBox = document.getElementById('adhocAiReportBox');
 
     modal.classList.add('open');
+
+    // If we have a cached report, show it instantly
+    if (adhocAiCache) {
+      loading.style.display = 'none';
+      reportBox.innerHTML = adhocAiCache;
+      document.querySelectorAll('.adhoc-pdf-btn').forEach(b => b.style.display = 'block');
+      return;
+    }
+
     loading.style.display = 'block';
     reportBox.innerHTML = '';
     document.querySelectorAll('.adhoc-pdf-btn').forEach(b => b.style.display = 'none');
@@ -1880,6 +1892,7 @@
           <p>${data.error}</p>
         </div>`;
       } else {
+        adhocAiCache = data.html; // Cache the report
         reportBox.innerHTML = data.html;
         document.querySelectorAll('.adhoc-pdf-btn').forEach(b => b.style.display = 'block');
       }
@@ -1904,13 +1917,45 @@
       return;
     }
 
+    // Inject temporary print-mode styles that override dark theme
+    const printStyle = document.createElement('style');
+    printStyle.id = 'pdfPrintMode';
+    printStyle.textContent = `
+      #adhocAiReportBox, #adhocAiReportBox *,
+      #adhocAiReportBox *::before, #adhocAiReportBox *::after {
+        color: #334155 !important;
+        background: transparent !important;
+        background-color: transparent !important;
+      }
+      #adhocAiReportBox { background: #ffffff !important; padding: 24px 32px !important; }
+      #adhocAiReportBox h1, #adhocAiReportBox h2 { color: #0f172a !important; font-size: 17px !important; border-bottom: 2px solid #cbd5e1 !important; padding-bottom: 6px !important; }
+      #adhocAiReportBox h3, #adhocAiReportBox h4, #adhocAiReportBox h5 { color: #1e293b !important; font-size: 14px !important; }
+      #adhocAiReportBox p { color: #334155 !important; }
+      #adhocAiReportBox strong, #adhocAiReportBox b { color: #0f172a !important; }
+      #adhocAiReportBox a { color: #2563eb !important; }
+      #adhocAiReportBox table { border: 1px solid #d1d5db !important; background: #ffffff !important; }
+      #adhocAiReportBox th { background: #f1f5f9 !important; color: #0f172a !important; border-bottom: 2px solid #d1d5db !important; }
+      #adhocAiReportBox td { color: #334155 !important; border-bottom: 1px solid #e5e7eb !important; background: #ffffff !important; }
+      #adhocAiReportBox tr { background: #ffffff !important; }
+      #adhocAiReportBox thead, #adhocAiReportBox thead tr { background: #f1f5f9 !important; }
+      #adhocAiReportBox li { color: #334155 !important; }
+      #adhocAiReportBox code, #adhocAiReportBox pre { color: #be185d !important; background: #fef2f2 !important; }
+      #adhocAiReportBox blockquote { color: #475569 !important; background: #f8fafc !important; border-left: 3px solid #6366f1 !important; }
+      #adhocAiReportBox em, #adhocAiReportBox i { color: #475569 !important; }
+      #adhocAiReportBox span, #adhocAiReportBox div { color: #334155 !important; }
+    `;
+    document.head.appendChild(printStyle);
+
     html2pdf().set({
-      margin: 10,
+      margin: [10, 10, 10, 10],
       filename: filename,
       image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true, backgroundColor: '#0f172a' },
+      html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
       jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-    }).from(element).save();
+    }).from(element).save().then(() => {
+      // Remove print styles to restore dark-theme appearance
+      document.getElementById('pdfPrintMode')?.remove();
+    });
   }
 </script>
 

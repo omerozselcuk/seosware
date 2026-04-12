@@ -235,12 +235,23 @@ async function runProject() {
 }
 
 // ─── AI INSIGHTS ───
+const aiInsightCache = {}; // Cache by runId
+
 async function openAiInsight(runId) {
   const modal = document.getElementById('aiModal');
   const loading = document.getElementById('aiLoading');
   const reportBox = document.getElementById('aiReportBox');
   
   modal.classList.add('open');
+
+  // If we have a cached report for this runId, show it instantly
+  if (aiInsightCache[runId]) {
+    loading.style.display = 'none';
+    reportBox.innerHTML = aiInsightCache[runId];
+    document.querySelectorAll('.pdf-btn').forEach(btn => btn.style.display = 'block');
+    return;
+  }
+
   loading.style.display = 'block';
   reportBox.innerHTML = '';
   
@@ -257,6 +268,7 @@ async function openAiInsight(runId) {
         <p>${data.error}</p>
       </div>`;
     } else {
+      aiInsightCache[runId] = data.html; // Cache the report
       reportBox.innerHTML = data.html;
       document.querySelectorAll('.pdf-btn').forEach(btn => btn.style.display = 'block');
     }
@@ -277,21 +289,44 @@ function downloadAiReportAsPdf() {
   const dateStr = new Date().toISOString().split('T')[0];
   const filename = `Seosware-AI-Raporu-${projectName}-${dateStr}.pdf`.replace(/\s+/g, '-');
 
-  // PDF Options
-  const opt = {
-    margin:       10,
-    filename:     filename,
-    image:        { type: 'jpeg', quality: 0.98 },
-    html2canvas:  { 
-      scale: 2, 
-      useCORS: true,
-      backgroundColor: '#0f172a' // Match Seosware dark theme background
-    },
-    jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
-  };
+  // Inject temporary print-mode styles that override dark theme
+  const printStyle = document.createElement('style');
+  printStyle.id = 'pdfPrintMode';
+  printStyle.textContent = `
+    #aiReportBox, #aiReportBox *,
+    #aiReportBox *::before, #aiReportBox *::after {
+      color: #334155 !important;
+      background: transparent !important;
+      background-color: transparent !important;
+    }
+    #aiReportBox { background: #ffffff !important; padding: 24px 32px !important; }
+    #aiReportBox h1, #aiReportBox h2 { color: #0f172a !important; font-size: 17px !important; border-bottom: 2px solid #cbd5e1 !important; padding-bottom: 6px !important; }
+    #aiReportBox h3, #aiReportBox h4, #aiReportBox h5 { color: #1e293b !important; font-size: 14px !important; }
+    #aiReportBox p { color: #334155 !important; }
+    #aiReportBox strong, #aiReportBox b { color: #0f172a !important; }
+    #aiReportBox a { color: #2563eb !important; }
+    #aiReportBox table { border: 1px solid #d1d5db !important; background: #ffffff !important; }
+    #aiReportBox th { background: #f1f5f9 !important; color: #0f172a !important; border-bottom: 2px solid #d1d5db !important; }
+    #aiReportBox td { color: #334155 !important; border-bottom: 1px solid #e5e7eb !important; background: #ffffff !important; }
+    #aiReportBox tr { background: #ffffff !important; }
+    #aiReportBox thead, #aiReportBox thead tr { background: #f1f5f9 !important; }
+    #aiReportBox li { color: #334155 !important; }
+    #aiReportBox code, #aiReportBox pre { color: #be185d !important; background: #fef2f2 !important; }
+    #aiReportBox blockquote { color: #475569 !important; background: #f8fafc !important; border-left: 3px solid #6366f1 !important; }
+    #aiReportBox em, #aiReportBox i { color: #475569 !important; }
+    #aiReportBox span, #aiReportBox div { color: #334155 !important; }
+  `;
+  document.head.appendChild(printStyle);
 
-  // Run html2pdf
-  html2pdf().set(opt).from(element).save();
+  html2pdf().set({
+    margin: [10, 10, 10, 10],
+    filename: filename,
+    image: { type: 'jpeg', quality: 0.98 },
+    html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
+    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+  }).from(element).save().then(() => {
+    document.getElementById('pdfPrintMode')?.remove();
+  });
 }
 
 // Init

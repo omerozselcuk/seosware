@@ -124,6 +124,25 @@ function buildCategory(score, metrics, details = []) {
   return { score, grade: calcGrade(score), metrics, details };
 }
 
+// CDP type (Script, Stylesheet, Image, Font, XHR, Fetch, Document, Other) -> internal type (js, css, image, font, other)
+function normalizeResourceType(cdpType, contentType) {
+  const t = (cdpType || '').toLowerCase();
+  // CDP type first
+  if (t === 'script') return 'js';
+  if (t === 'stylesheet') return 'css';
+  if (t === 'image' || t === 'media') return 'image';
+  if (t === 'font') return 'font';
+  if (t === 'document') return 'document';
+  if (t === 'xhr' || t === 'fetch') return 'xhr';
+  // Fallback: check content-type header
+  const ct = (contentType || '').toLowerCase();
+  if (ct.includes('javascript') || ct.includes('ecmascript')) return 'js';
+  if (ct.includes('css')) return 'css';
+  if (ct.includes('image/')) return 'image';
+  if (ct.includes('font') || ct.includes('woff')) return 'font';
+  return 'other';
+}
+
 // ─── Category Auditors ────────────────────────────────────────────────────────
 
 async function auditPageWeight(cdp, networkData, page) {
@@ -777,7 +796,7 @@ async function collectNetworkData(cdp, page, url) {
   const onRequestWillBeSent = ({ requestId, request, type }) => {
     resources.set(requestId, {
       url: request.url,
-      type: (type || 'other').toLowerCase(),
+      type: normalizeResourceType(type),
       status: null,
       transferSize: 0,
       protocol: null,
@@ -797,7 +816,9 @@ async function collectNetworkData(cdp, page, url) {
     if (!res) return;
     res.status = response.status;
     res.protocol = response.protocol;
-    res.type = (type || res.type || 'other').toLowerCase();
+    // Normalize type: prefer responseReceived type, fallback to content-type header
+    const ct = response.headers?.['content-type'] || response.headers?.['Content-Type'] || '';
+    res.type = normalizeResourceType(type, ct);
     res.headers = response.headers || {};
   };
 
@@ -811,8 +832,14 @@ async function collectNetworkData(cdp, page, url) {
   cdp.on('Network.loadingFinished', onLoadingFinished);
 
   // Page navigates — wait for it
-  await page.reload({ waitUntil: 'networkidle' });
-  await page.waitForTimeout(2000);
+  try {
+    await page.reload({ waitUntil: 'load', timeout: 30000 });
+    // Attempt to wait for networkidle but don't hang if it doesn't happen
+    await page.waitForLoadState('networkidle').catch(() => {});
+    await page.waitForTimeout(2000);
+  } catch (e) {
+    console.warn('[Frontend Auditor] Reload timeout/error, continuing anyway:', e.message);
+  }
 
   cdp.off('Network.requestWillBeSent', onRequestWillBeSent);
   cdp.off('Network.responseReceived', onResponseReceived);
@@ -828,7 +855,12 @@ async function collectNetworkData(cdp, page, url) {
     const reqId = [...resources.entries()].find(([,v]) => v === res)?.[0];
     if (!reqId) return;
     try {
-      const { body } = await cdp.send('Network.getResponseBody', { requestId: reqId });
+      // Use a timeout for body fetching to avoid hanging
+      const response = await Promise.race([
+        cdp.send('Network.getResponseBody', { requestId: reqId }),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 2000))
+      ]);
+      const body = response.body;
       res.responseBody = body;
       // Simple hash for deduplication (djb2)
       let hash = 5381;

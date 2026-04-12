@@ -78,18 +78,33 @@ async function deleteProject(id) {
 async function saveHistory(projectId, results) {
   const timestamp = new Date().toISOString();
   const filename = timestamp.replace(/[:.]/g, '-') + '.json';
-  const filePath = path.join(HISTORY_DIR, projectId, filename);
-  
+  const projectDir = path.join(HISTORY_DIR, projectId);
+  const filePath = path.join(projectDir, filename);
+  const runId = filename.replace('.json', '');
+
+  // Ensure project dir exists
+  await fs.mkdir(projectDir, { recursive: true });
+
+  // Strip heavy screenshot base64 from JSON, save as separate files
+  const cleanResults = Array.isArray(results) ? results.map((r, idx) => {
+    if (r.screenshot) {
+      // Save screenshot as separate JPEG file
+      const ssPath = path.join(projectDir, `${runId}_ss_${idx}.jpg`);
+      fs.writeFile(ssPath, Buffer.from(r.screenshot, 'base64')).catch(() => {});
+      const { screenshot, ...rest } = r;
+      return { ...rest, hasScreenshot: true };
+    }
+    return r;
+  }) : results;
+
   const historyData = {
-    id: filename.replace('.json', ''),
+    id: runId,
     projectId,
     timestamp,
     totalUrls: Array.isArray(results) ? results.length : 1,
-    results
+    results: cleanResults
   };
 
-  // Ensure project dir exists
-  await fs.mkdir(path.join(HISTORY_DIR, projectId), { recursive: true });
   await fs.writeFile(filePath, JSON.stringify(historyData, null, 2));
   return historyData;
 }

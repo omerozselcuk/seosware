@@ -89,7 +89,9 @@ app.post('/api/audit', async (req, res) => {
 
         const result = await runAudit(url, { timeout: 30000 });
         auditState.results.push(result);
-        broadcast('result', { index: i, result });
+        // Send result via SSE without heavy screenshot base64
+        const { screenshot, ...resultLite } = result;
+        broadcast('result', { index: i, result: { ...resultLite, hasScreenshot: !!screenshot } });
 
         console.log = origLog;
       } catch (err) {
@@ -263,7 +265,9 @@ app.post('/api/projects/:id/run', async (req, res) => {
         };
         const result = await runAudit(url, { timeout: 30000 });
         auditState.results.push(result);
-        broadcast('result', { index: i, result });
+        // Send result via SSE without heavy screenshot base64
+        const { screenshot, ...resultLite } = result;
+        broadcast('result', { index: i, result: { ...resultLite, hasScreenshot: !!screenshot } });
         console.log = origLog;
       } catch (err) {
         const errResult = { url, error: err.message };
@@ -296,7 +300,38 @@ app.post('/api/cancel', (req, res) => {
 
 // Get current state
 app.get('/api/state', (req, res) => {
-  res.json(auditState);
+  // Exclude heavy screenshot data from state endpoint
+  const lite = {
+    ...auditState,
+    results: auditState.results.map(r => {
+      const { screenshot, ...rest } = r;
+      return { ...rest, hasScreenshot: !!screenshot };
+    })
+  };
+  res.json(lite);
+});
+
+// Serve screenshot for a specific result by index
+app.get('/api/screenshot/:index', (req, res) => {
+  const idx = parseInt(req.params.index, 10);
+  const result = auditState.results[idx];
+  if (!result?.screenshot) return res.status(404).json({ error: 'Screenshot not found' });
+  const buf = Buffer.from(result.screenshot, 'base64');
+  res.set({ 'Content-Type': 'image/jpeg', 'Content-Length': buf.length, 'Cache-Control': 'public, max-age=300' });
+  res.send(buf);
+});
+
+// Serve screenshot from project history
+app.get('/api/projects/:pId/history/:runId/screenshot/:index', async (req, res) => {
+  const { pId, runId, index } = req.params;
+  const ssPath = path.join(__dirname, '..', 'data', 'history', pId, `${runId}_ss_${index}.jpg`);
+  try {
+    await require('fs').promises.access(ssPath);
+    res.set({ 'Content-Type': 'image/jpeg', 'Cache-Control': 'public, max-age=300' });
+    require('fs').createReadStream(ssPath).pipe(res);
+  } catch {
+    res.status(404).json({ error: 'Screenshot not found' });
+  }
 });
 
 // Get results

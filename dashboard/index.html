@@ -583,7 +583,31 @@
       border-radius: var(--radius);
       padding: 24px;
       backdrop-filter: blur(10px);
+      position: relative;
+      overflow: hidden;
+      transition: all 0.3s;
     }
+
+    .detail-panel:hover {
+      border-color: var(--border-hover);
+      transform: translateY(-2px);
+      box-shadow: var(--shadow);
+    }
+
+    .detail-panel::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      border-radius: var(--radius) var(--radius) 0 0;
+      background: var(--border);
+    }
+
+    .detail-panel.grade-a::before { background: linear-gradient(90deg, var(--green), #10b981); }
+    .detail-panel.grade-b::before { background: linear-gradient(90deg, var(--cyan), #06b6d4); }
+    .detail-panel.grade-c::before { background: linear-gradient(90deg, var(--yellow), #f59e0b); }
+    .detail-panel.grade-d::before { background: linear-gradient(90deg, var(--orange), #ea580c); }
+    .detail-panel.grade-f::before { background: linear-gradient(90deg, var(--red), #dc2626); }
 
     .panel-title {
       font-size: 15px;
@@ -608,6 +632,19 @@
     .stat-label { color: var(--text-secondary); }
 
     .stat-value { font-weight: 600; }
+
+    .stat-group {
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 1.2px;
+      padding: 14px 0 4px;
+      margin-top: 2px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 2px;
+    }
+    .stat-group:first-child { padding-top: 0; margin-top: 0; }
 
     .badge {
       display: inline-flex;
@@ -850,6 +887,7 @@
   let results = [];
   let eventSource = null;
   let currentActiveTabResult = null;
+  let historyContext = null; // { pId, hId } when viewing project history
 
   // ─── URL MANAGEMENT ───
   const urlInput = document.getElementById('urlInput');
@@ -1077,7 +1115,7 @@
     if (r.type === 'site-audit') {
       document.getElementById('resultsContent').innerHTML = buildSiteAuditResults(r.siteAudit);
     } else {
-      document.getElementById('resultsContent').innerHTML = buildOverview(r) + buildDetailPanels(r);
+      document.getElementById('resultsContent').innerHTML = buildScreenshotPanel(r, idx) + buildOverview(r) + buildDetailPanels(r, idx);
     }
   }
 
@@ -1288,12 +1326,12 @@
     const meta = r.meta || {};
     const imgs = r.images || {};
     const links = r.links || {};
+    const fe = r.frontend || {};
 
     return `<div class="overview-grid">
+      ${overviewCard('FRONTEND', '🎨', fe.globalGrade || '—', `${fe.globalScore || 0}/100`, gradeClass(fe.globalGrade))}
       ${overviewCard('AI SEARCH', '🤖', ai.grade || '—', `${ai.overallPercentage || 0}/100`, gradeClass(ai.grade))}
-      ${overviewCard('STATUS', '🌐', r.status || '—', `${r.loadTime || 0}ms yükleme`, r.status === 200 ? 'grade-a' : 'grade-d')}
-      ${overviewCard('LCP', '⚡', perf.lcp ? Math.round(perf.lcp) + 'ms' : '—', lcpLabel(perf.lcp), lcpGrade(perf.lcp))}
-      ${overviewCard('CLS', '📐', perf.cls != null ? perf.cls : '—', clsLabel(perf.cls), clsGrade(perf.cls))}
+      ${overviewCard('TAM YÜKLEME', '⏱️', r.loadTime ? (r.loadTime / 1000).toFixed(2) + 's' : '—', 'Sayfa tam yükleme süresi', r.loadTime < 3000 ? 'grade-a' : r.loadTime < 6000 ? 'grade-c' : 'grade-d')}
       ${overviewCard('IMAGES', '🖼️', imgs.totalImages || 0, `${imgs.imagesWithoutAlt || 0} alt eksik`, imgs.imagesWithoutAlt > 5 ? 'grade-d' : 'grade-a')}
       ${overviewCard('LINKS', '🔗', (links.totalInternalLinks||0) + (links.totalExternalLinks||0), `${links.totalInternalLinks||0} iç / ${links.totalExternalLinks||0} dış`, 'grade-b')}
     </div>`;
@@ -1317,7 +1355,7 @@
   function clsGrade(v) { if (v == null) return 'grade-f'; if (v < 0.1) return 'grade-a'; if (v < 0.25) return 'grade-c'; return 'grade-f'; }
 
   // ─── DETAIL PANELS ───
-  function buildDetailPanels(r) {
+  function buildDetailPanels(r, resultIndex) {
     return `<div class="detail-grid">
       ${buildSecurityPanel(r)}
       ${buildMetaPanel(r)}
@@ -1326,12 +1364,25 @@
       ${buildPerformancePanel(r)}
       ${buildLinksPanel(r)}
       ${buildMobilePanel(r)}
-      ${buildFrontendPanel(r)}
+      ${buildFrontendPanels(r)}
     </div>`;
   }
 
-  // ─── FRONTEND QUALITY PANEL ───
-  function buildFrontendPanel(r) {
+  function buildScreenshotPanel(r, resultIndex) {
+    if (!r.hasScreenshot) return '';
+    const ssUrl = historyContext
+      ? `/api/projects/${historyContext.pId}/history/${historyContext.hId}/screenshot/${resultIndex ?? 0}`
+      : `/api/screenshot/${resultIndex ?? 0}`;
+    return `<div style="margin-bottom:20px;border-radius:12px;overflow:hidden;border:1px solid var(--border);background:var(--card-bg)">
+      <div style="padding:12px 16px;font-size:13px;font-weight:600;color:var(--text-muted);display:flex;align-items:center;gap:8px">📸 Sayfa Ekran Görüntüsü</div>
+      <div style="padding:0 8px 8px;text-align:center">
+        <img src="${ssUrl}" alt="Page Screenshot" style="max-width:100%;border-radius:8px;cursor:pointer" onerror="this.parentElement.parentElement.style.display='none'" onclick="this.requestFullscreen?.()" />
+      </div>
+    </div>`;
+  }
+
+  // ─── FRONTEND QUALITY PANELS (one card per category) ───
+  function buildFrontendPanels(r) {
     const fe = r.frontend;
     if (!fe || fe.error) {
       return `<div class="detail-panel"><div class="panel-title">🎨 Frontend Kalitesi</div><div style="font-size:13px;color:var(--text-muted);padding:16px 0">Frontend analizi mevcut değil${fe?.error ? ': ' + fe.error : ''}.</div></div>`;
@@ -1339,161 +1390,116 @@
 
     const cats = fe.categories || {};
     const gradeColor = g => ({'A':'var(--green)','B':'var(--cyan)','C':'var(--yellow)','D':'var(--orange)','E':'var(--red)','F':'var(--red)'}[g] || 'var(--text-muted)');
+    const gradeBarClass = g => ({'A':'grade-a','B':'grade-b','C':'grade-c','D':'grade-d','E':'grade-f','F':'grade-f'}[g] || 'grade-f');
 
-    const categoryRow = (label, icon, cat) => {
+    const fePanel = (title, icon, cat, pairs, options = {}) => {
       if (!cat) return '';
       const color = gradeColor(cat.grade);
-      return `<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:rgba(0,0,0,0.2);border-radius:8px;margin-bottom:6px">
-        <div style="display:flex;align-items:center;gap:8px">
-          <span style="font-size:16px">${icon}</span>
-          <span style="font-size:13px;color:var(--text-secondary)">${label}</span>
+      const barClass = gradeBarClass(cat.grade);
+      const m = cat.metrics || {};
+      const rows = pairs.map(([label, key, suffix]) => {
+        const rawVal = m[key];
+        const val = (rawVal === undefined || rawVal === null) ? options.defaultValue : rawVal;
+        if (val === undefined || val === null) return '';
+        return `<div class="stat-row"><span class="stat-label">${label}</span><span class="stat-value">${val}${suffix||''}</span></div>`;
+      }).join('');
+      return `<div class="detail-panel ${barClass}">
+        <div class="panel-title">${icon} ${title}
+          <span style="margin-left:auto;font-size:20px;font-weight:800;color:${color}">${cat.grade}</span>
+          <span style="font-size:12px;color:var(--text-muted);font-weight:400;margin-left:6px">${cat.score}/100</span>
         </div>
-        <div style="display:flex;align-items:center;gap:12px">
-          <span style="font-size:11px;color:var(--text-muted)">${cat.score}/100</span>
-          <span style="font-weight:700;color:${color};font-size:16px;min-width:20px;text-align:center">${cat.grade}</span>
-        </div>
+        ${rows}
       </div>`;
     };
 
-    const metricRows = (cat, pairs) => {
-      if (!cat || !cat.metrics) return '';
-      const m = cat.metrics;
-      return pairs.map(([label, key, suffix]) => {
-        const val = m[key];
-        if (val === undefined || val === null) return '';
-        return `<div class="stat-row"><span class="stat-label" style="font-size:12px">${label}</span><span class="stat-value" style="font-size:12px">${val}${suffix||''}</span></div>`;
+    const fePanelGrouped = (title, icon, cat, groups) => {
+      if (!cat) return '';
+      const color = gradeColor(cat.grade);
+      const barClass = gradeBarClass(cat.grade);
+      const m = cat.metrics || {};
+      const groupHtml = groups.map(([groupLabel, pairs]) => {
+        const rows = pairs.map(([label, key, suffix]) => {
+          const rawVal = m[key];
+          const val = (rawVal === undefined || rawVal === null) ? undefined : rawVal;
+          if (val === undefined) return '';
+          return `<div class="stat-row"><span class="stat-label">${label}</span><span class="stat-value">${val}${suffix||''}</span></div>`;
+        }).join('');
+        if (!rows) return '';
+        return `<div class="stat-group">${groupLabel}</div>${rows}`;
       }).join('');
+      return `<div class="detail-panel ${barClass}">
+        <div class="panel-title">${icon} ${title}
+          <span style="margin-left:auto;font-size:20px;font-weight:800;color:${color}">${cat.grade}</span>
+          <span style="font-size:12px;color:var(--text-muted);font-weight:400;margin-left:6px">${cat.score}/100</span>
+        </div>
+        ${groupHtml}
+      </div>`;
     };
 
-    const globalColor = gradeColor(fe.globalGrade);
-
-    return `<div class="detail-panel" style="grid-column: span 2">
-      <div class="panel-title">🎨 Frontend Kalitesi
-        <span style="margin-left:auto;font-size:22px;font-weight:800;color:${globalColor}">${fe.globalGrade}</span>
-        <span style="font-size:12px;color:var(--text-muted);font-weight:400;margin-left:6px">${fe.globalScore}/100</span>
-      </div>
-
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
-
-        <div>
-          ${categoryRow('Page Weight', '⚖️', cats.pageWeight)}
-          ${cats.pageWeight ? metricRows(cats.pageWeight, [
-            ['Toplam Ağırlık', 'totalKb', ' KB'],
-            ['JS', 'jsKb', ' KB'],
-            ['CSS', 'cssKb', ' KB'],
-            ['Görsel', 'imageKb', ' KB'],
-            ['Font', 'fontKb', ' KB'],
-            ['Büyük Görseller', 'oversizedImages', ''],
-            ['Sıkıştırılmamış', 'uncompressedKb', ' KB'],
-          ]) : ''}
-        </div>
-
-        <div>
-          ${categoryRow('Requests', '🔄', cats.requests)}
-          ${cats.requests ? metricRows(cats.requests, [
-            ['Toplam İstek', 'totalRequests', ''],
-            ['Farklı Domain', 'domains', ''],
-            ['3rd Party', 'thirdPartyDomains', ''],
-            ['404 Hata', 'notFound', ''],
-            ['Boş İstek', 'emptyRequests', ''],
-            ['Fold Altı Görsel', 'belowFoldImages', ''],
-            ['Gizli Görsel', 'hiddenImages', ''],
-          ]) : ''}
-        </div>
-
-        <div>
-          ${categoryRow('DOM Complexity', '🌿', cats.domComplexity)}
-          ${cats.domComplexity ? metricRows(cats.domComplexity, [
-            ['DOM Elementleri', 'totalElements', ''],
-            ['Maks. Derinlik', 'maxDepth', ''],
-            ['iframe Sayısı', 'iframes', ''],
-            ['Tekrarlanan ID', 'duplicatedIds', ''],
-          ]) : ''}
-        </div>
-
-        <div>
-          ${categoryRow('JS Complexity', '⚡', cats.jsComplexity)}
-          ${cats.jsComplexity ? metricRows(cats.jsComplexity, [
-            ['JS Exec Süresi', 'execTimeMs', ' ms'],
-            ['DOM Erişimi', 'domAccess', ''],
-            ['Scroll Listener', 'scrollListeners', ''],
-            ['Global Değişken', 'globalVariables', ''],
-          ]) : ''}
-        </div>
-
-        <div>
-          ${categoryRow('Bad JS', '🚨', cats.badJs)}
-          ${cats.badJs ? metricRows(cats.badJs, [
-            ['JS Hataları', 'jsErrors', ''],
-            ['document.write', 'documentWriteCalls', ''],
-            ['Sync XHR', 'syncXmlHttpRequests', ''],
-            ['Console Uyarı', 'consoleWarnings', ''],
-          ]) : ''}
-        </div>
-
-        <div>
-          ${categoryRow('CSS Complexity', '🎨', cats.cssComplexity)}
-          ${cats.cssComplexity ? metricRows(cats.cssComplexity, [
-            ['Toplam Kural', 'totalRules', ''],
-            ['Karmaşık Seçici', 'complexSelectors', ''],
-            ['Renk Sayısı', 'uniqueColors', ''],
-            ['Benzer Renkler', 'similarColors', ''],
-            ['Breakpoint', 'breakpoints', ''],
-            ['Max-Width Sorgu', 'notMobileFirstQueries', ''],
-          ]) : ''}
-        </div>
-
-        <div>
-          ${categoryRow('Bad CSS', '🩹', cats.badCss)}
-          ${cats.badCss ? metricRows(cats.badCss, [
-            ['Sözdizim Hatası', 'syntaxErrors', ''],
-            ['@import', 'atImport', ''],
-            ['Dup. Seçici', 'duplicatedSelectors', ''],
-            ['Dup. Özellik', 'duplicatedProperties', ''],
-            ['Boş Kural', 'emptyRules', ''],
-            ['!important', 'importantUsage', ''],
-            ['Eski Prefix', 'oldPrefixes', ''],
-            ['Gereksiz body', 'redundantBodySelectors', ''],
-          ]) : ''}
-        </div>
-
-        <div>
-          ${categoryRow('Server Config', '🖥️', cats.serverConfig)}
-          ${cats.serverConfig ? metricRows(cats.serverConfig, [
-            ['HTTP/1.1 Kaynak', 'http1Resources', ''],
-            ['Cachesiz Kaynak', 'noCacheResources', ''],
-            ['Cache Devre Dışı', 'cachingDisabled', ''],
-            ['Cache Çok Kısa', 'cachingTooShort', ''],
-            ['Bağlantı Kapandı', 'connectionsClosed', ''],
-          ]) : ''}
-        </div>
-
-        <div>
-          ${categoryRow('Web Fonts', '🔤', cats.webFonts)}
-          ${cats.webFonts ? metricRows(cats.webFonts, [
-            ['Font Sayısı', 'webfontCount', ''],
-            ['Toplam Font KB', 'totalFontKb', ' KB'],
-            ['WOFF2 Dışı', 'nonWoff2Count', ''],
-            ['Büyük Font', 'overweightFonts', ''],
-          ]) : ''}
-        </div>
-
-      </div>
-    </div>`;
+    return [
+      fePanelGrouped('Page Weight', '⚖️', cats.pageWeight, [
+        ['Boyut Dağılımı', [['Toplam Ağırlık','totalKb',' KB'],['JS','jsKb',' KB'],['CSS','cssKb',' KB'],['Görsel','imageKb',' KB'],['Font','fontKb',' KB']]],
+        ['Optimizasyon Sorunları', [['Büyük Görseller','oversizedImages',''],['Sıkıştırılmamış Kaynak','uncompressedKb',' KB']]],
+      ]),
+      fePanelGrouped('Requests', '🔄', cats.requests, [
+        ['İstek Sayıları', [['Toplam İstek','totalRequests',''],['Farklı Domain','domains',''],['3rd Party','thirdPartyDomains','']]],
+        ['Sorunlu İstekler', [['404 Hata','notFound',''],['Boş İstek','emptyRequests','']]],
+        ['Görsel Yükleme', [['Fold Altı Görsel','belowFoldImages',''],['Gizli Görsel','hiddenImages','']]],
+      ]),
+      fePanelGrouped('DOM Complexity', '🌿', cats.domComplexity, [
+        ['Yapı', [['DOM Elementleri','totalElements',''],['Maks. Derinlik','maxDepth',''],['iframe Sayısı','iframes','']]],
+        ['Sorunlar', [['Tekrarlanan ID','duplicatedIds','']]],
+      ]),
+      fePanelGrouped('JS Complexity', '⚡', cats.jsComplexity, [
+        ['Performans', [['JS Exec Süresi','execTimeMs',' ms'],['DOM Erişim Sayısı','domAccess','']]],
+        ['Global Kirlilik', [['Scroll Listener','scrollListeners',''],['Global Değişken Sayısı','globalVariables','']]],
+      ]),
+      fePanelGrouped('Bad JS', '🚨', cats.badJs, [
+        ['Hatalar', [['JS Hataları','jsErrors',''],['Console Uyarısı','consoleWarnings','']]],
+        ['Anti-Pattern', [['document.write','documentWriteCalls',''],['Sync XHR','syncXmlHttpRequests','']]],
+      ]),
+      fePanelGrouped('CSS Complexity', '🎨', cats.cssComplexity, [
+        ['Yapı', [['Toplam Kural','totalRules',''],['Karmaşık Seçici','complexSelectors','']]],
+        ['Renk Yönetimi', [['Renk Sayısı','uniqueColors',''],['Benzer Renkler','similarColors','']]],
+        ['Responsive', [['Breakpoint Sayısı','breakpoints',''],['Mobile-First Dışı Sorgu','notMobileFirstQueries','']]],
+      ]),
+      fePanelGrouped('Bad CSS', '🩹', cats.badCss, [
+        ['Hatalar', [['Sözdizim Hatası','syntaxErrors',''],['@import Kullanımı','atImport','']]],
+        ['Tekrarlar', [['Dup. Seçici','duplicatedSelectors',''],['Dup. Özellik','duplicatedProperties',''],['Boş Kural','emptyRules','']]],
+        ['Anti-Pattern', [['!important Kullanımı','importantUsage',''],['Eski Prefix','oldPrefixes',''],['Gereksiz body Seçici','redundantBodySelectors','']]],
+      ]),
+      fePanelGrouped('Server Config', '🖥️', cats.serverConfig, [
+        ['Protokol', [['HTTP/1.1 Kaynak','http1Resources','']]],
+        ['Cache Politikası', [['Cachesiz Kaynak','noCacheResources',''],['Cache Devre Dışı','cachingDisabled',''],['Cache Çok Kısa','cachingTooShort','']]],
+        ['Bağlantı', [['Bağlantı Kapandı','connectionsClosed','']]],
+      ]),
+      fePanelGrouped('Web Fonts', '🔤', cats.webFonts, [
+        ['Kullanım', [['Font Sayısı','webfontCount',''],['Toplam Font KB','totalFontKb',' KB']]],
+        ['Optimizasyon', [['WOFF2 Dışı Format','nonWoff2Count',''],['Büyük Font Dosyası','overweightFonts','']]],
+      ]),
+    ].filter(Boolean).join('');
   }
 
   function buildMetaPanel(r) {
     const m = r.meta || {};
     return `<div class="detail-panel">
       <div class="panel-title">🏷️ Meta Etiketler</div>
+
+      <div class="stat-group">Temel Meta</div>
       <div class="stat-row"><span class="stat-label">Title</span><span class="stat-value" style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${m.title || 'N/A'}</span></div>
       <div class="stat-row"><span class="stat-label">Title Uzunluğu</span><span class="stat-value">${badge(m.titleLength, 60, 70)} ${m.titleLength || 0} karakter</span></div>
       <div class="stat-row"><span class="stat-label">Description Uzunluğu</span><span class="stat-value">${m.metaDescriptionLength || 0} karakter</span></div>
+
+      <div class="stat-group">Canonical & Dil</div>
       <div class="stat-row"><span class="stat-label">Canonical Eşleşme</span><span class="stat-value">${badge(m.canonicalMatch)}</span></div>
-      <div class="stat-row"><span class="stat-label">Dil</span><span class="stat-value">${m.language || '—'}</span></div>
+      <div class="stat-row"><span class="stat-label">Sayfa Dili</span><span class="stat-value">${m.language || '—'}</span></div>
+
+      <div class="stat-group">Sosyal Medya</div>
       <div class="stat-row"><span class="stat-label">OG Title</span><span class="stat-value">${m.ogTitle ? '✅' : '❌'}</span></div>
       <div class="stat-row"><span class="stat-label">OG Image</span><span class="stat-value">${m.ogImage ? '✅' : '❌'}</span></div>
       <div class="stat-row"><span class="stat-label">Twitter Card</span><span class="stat-value">${m.twitterCard || '❌'}</span></div>
+
+      <div class="stat-group">Crawl Yönergeleri</div>
       <div class="stat-row"><span class="stat-label">Robots</span><span class="stat-value"><span class="tag">${m.robots || '—'}</span></span></div>
     </div>`;
   }
@@ -1501,11 +1507,15 @@
   function buildSecurityPanel(r) {
     const s = r.security || {};
     return `<div class="detail-panel">
-      <div class="panel-title">🛡️ Güvenlik Yönergeleri</div>
-      <div class="stat-row"><span class="stat-label">HTTPS Bağlantısı</span><span class="stat-value">${s.isHttps ? '✅' : '❌'}</span></div>
-      <div class="stat-row"><span class="stat-label">HSTS Aktif</span><span class="stat-value">${s.hsts ? '✅' : '❌'}</span></div>
+      <div class="panel-title">🛡️ Güvenlik</div>
+
+      <div class="stat-group">Bağlantı Güvenliği</div>
+      <div class="stat-row"><span class="stat-label">HTTPS</span><span class="stat-value">${s.isHttps ? '✅' : '❌'}</span></div>
+      <div class="stat-row"><span class="stat-label">HSTS (Zorunlu HTTPS)</span><span class="stat-value">${s.hsts ? '✅' : '❌'}</span></div>
+      <div class="stat-row"><span class="stat-label">Mixed Content (HTTP içerik)</span><span class="stat-value">${badge((s.mixedContent||[]).length, 0, 0, 'mixedContent')}</span></div>
+
+      <div class="stat-group">Güvenlik Başlıkları</div>
       <div class="stat-row"><span class="stat-label">X-Frame-Options</span><span class="stat-value"><span class="tag">${s.xFrameOptions || 'Yok'}</span></span></div>
-      <div class="stat-row"><span class="stat-label">Mixed Content</span><span class="stat-value">${badge((s.mixedContent||[]).length, 0, 0, 'mixedContent')}</span></div>
     </div>`;
   }
 
@@ -1563,14 +1573,20 @@
     const h1s = c.h1 || [];
     return `<div class="detail-panel">
       <div class="panel-title">📄 İçerik Analizi</div>
+
+      <div class="stat-group">Başlık Yapısı</div>
       <div class="stat-row"><span class="stat-label">H1 Sayısı</span><span class="stat-value">${badge(h1s.length, 1, 2)}</span></div>
       <div class="stat-row"><span class="stat-label">H1 İçeriği</span><span class="stat-value" style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${h1s[0] || '—'}</span></div>
       <div class="stat-row"><span class="stat-label">H2 Sayısı</span><span class="stat-value">${c.h2Count || 0}</span></div>
       <div class="stat-row"><span class="stat-label">Heading Sırası</span><span class="stat-value">${headings.slice(0,6).map(h=>`<span class="tag">${h}</span>`).join('')}${headings.length>6?'...':''}</span></div>
+
+      <div class="stat-group">Yapısal Veri</div>
       <div class="stat-row"><span class="stat-label">JSON-LD Schema</span><span class="stat-value">${(c.jsonLdSchemas||[]).map(s=>`<span class="tag">${s.type}</span>`).join('') || '—'}</span></div>
-      <div class="stat-row"><span class="stat-label">Düşük Kontrast</span><span class="stat-value">${badge(c.lowContrastElements||0, 0, 10)}</span></div>
-      <div class="stat-row"><span class="stat-label">Inline Style</span><span class="stat-value">${c.inlineStyles||0}</span></div>
-      <div class="stat-row"><span class="stat-label">iFrame</span><span class="stat-value">${c.iframeCount||0}</span></div>
+
+      <div class="stat-group">Erişilebilirlik & Kod Kalitesi</div>
+      <div class="stat-row"><span class="stat-label">Düşük Kontrast Eleman</span><span class="stat-value">${badge(c.lowContrastElements||0, 0, 10)}</span></div>
+      <div class="stat-row"><span class="stat-label">Inline Style Sayısı</span><span class="stat-value">${c.inlineStyles||0}</span></div>
+      <div class="stat-row"><span class="stat-label">iFrame Sayısı</span><span class="stat-value">${c.iframeCount||0}</span></div>
     </div>`;
   }
 
@@ -1579,16 +1595,24 @@
     const rendering = r.rendering || {};
     return `<div class="detail-panel">
       <div class="panel-title">⚡ Performans</div>
+
+      <div class="stat-group">Core Web Vitals</div>
+      <div class="stat-row"><span class="stat-label">LCP — Largest Contentful Paint</span><span class="stat-value">${p.lcp ? Math.round(p.lcp)+'ms' : '—'}</span></div>
+      <div class="stat-row"><span class="stat-label">CLS — Layout Shift</span><span class="stat-value">${p.cls != null ? p.cls : '—'}</span></div>
+      <div class="stat-row"><span class="stat-label">INP — Etkileşim Gecikmesi</span><span class="stat-value">${p.inp != null ? p.inp+'ms' : '—'}</span></div>
+
+      <div class="stat-group">Yükleme Zamanlaması</div>
       <div class="stat-row"><span class="stat-label">DOM Content Loaded</span><span class="stat-value">${p.domContentLoaded||'—'}ms</span></div>
       <div class="stat-row"><span class="stat-label">Fully Loaded</span><span class="stat-value">${p.fullyLoaded||'—'}ms</span></div>
-      <div class="stat-row"><span class="stat-label">LCP</span><span class="stat-value">${p.lcp ? Math.round(p.lcp)+'ms' : '—'}</span></div>
-      <div class="stat-row"><span class="stat-label">INP (Simulated)</span><span class="stat-value">${p.inp != null ? p.inp+'ms' : '—'}</span></div>
-      <div class="stat-row"><span class="stat-label">CLS</span><span class="stat-value">${p.cls != null ? p.cls : '—'}</span></div>
-      <div class="stat-row"><span class="stat-label">Long Tasks</span><span class="stat-value">${badge(p.longTasks?.length || 0, 0, 0, 'longTasks')}</span></div>
-      <div class="stat-row"><span class="stat-label">Render Blocking</span><span class="stat-value">${badge((p.renderBlockingResources||[]).length, 5, 15, 'renderBlocking')}</span></div>
-      <div class="stat-row"><span class="stat-label">Unused CSS</span><span class="stat-value">${badge(p.unusedCssPercent || 0, 20, 50, 'unusedCss')}%</span></div>
-      <div class="stat-row"><span class="stat-label">Unused JS</span><span class="stat-value">${badge(p.unusedJsPercent || 0, 20, 50, 'unusedJs')}%</span></div>
-      <div class="stat-row"><span class="stat-label">SSR/CSR Farkı</span><span class="stat-value">${rendering.similarityScore != null ? rendering.similarityScore+'%' : '—'} ${rendering.renderDifference ? '⚠️' : '✅'}</span></div>
+
+      <div class="stat-group">Optimizasyon Sorunları</div>
+      <div class="stat-row"><span class="stat-label">Long Tasks (JS tıkama)</span><span class="stat-value">${badge(p.longTasks?.length || 0, 0, 0, 'longTasks')}</span></div>
+      <div class="stat-row"><span class="stat-label">Render Blocking Kaynak</span><span class="stat-value">${badge((p.renderBlockingResources||[]).length, 5, 15, 'renderBlocking')}</span></div>
+      <div class="stat-row"><span class="stat-label">Kullanılmayan CSS</span><span class="stat-value">${badge(p.unusedCssPercent || 0, 20, 50, 'unusedCss')}%</span></div>
+      <div class="stat-row"><span class="stat-label">Kullanılmayan JS</span><span class="stat-value">${badge(p.unusedJsPercent || 0, 20, 50, 'unusedJs')}%</span></div>
+
+      <div class="stat-group">Rendering</div>
+      <div class="stat-row"><span class="stat-label">SSR/CSR Benzerliği</span><span class="stat-value">${rendering.similarityScore != null ? rendering.similarityScore+'%' : '—'} ${rendering.renderDifference ? '⚠️' : '✅'}</span></div>
     </div>`;
   }
 
@@ -1596,13 +1620,21 @@
     const l = r.links || {};
     return `<div class="detail-panel">
       <div class="panel-title">🔗 Link Analizi</div>
+
+      <div class="stat-group">Bağlantı Durumu</div>
       <div class="stat-row"><span class="stat-label">İç / Dış Linkler</span><span class="stat-value">${l.totalInternalLinks||0} / ${l.totalExternalLinks||0}</span></div>
-      <div class="stat-row"><span class="stat-label">Href Eksik / Orphan (#)</span><span class="stat-value">${badge(l.linksWithoutHref||0, 0, 5)} / ${badge(l.orphanAnchors||0, 0, 10)}</span></div>
+      <div class="stat-row"><span class="stat-label">Href Eksik</span><span class="stat-value">${badge(l.linksWithoutHref||0, 0, 5)}</span></div>
+      <div class="stat-row"><span class="stat-label">Orphan Anchor (#)</span><span class="stat-value">${badge(l.orphanAnchors||0, 0, 10)}</span></div>
       <div class="stat-row"><span class="stat-label">target="_blank" (rel eksik)</span><span class="stat-value">${badge(l.linksWithoutRel||0, 0, 3)}</span></div>
+
+      <div class="stat-group">SEO Sinyalleri</div>
       <div class="stat-row"><span class="stat-label">Pagination (Next/Prev)</span><span class="stat-value"><span class="tag">${l.relNext?'Var':'Yok'}</span> <span class="tag">${l.relPrev?'Var':'Yok'}</span></span></div>
       <div class="stat-row"><span class="stat-label">Infinite Scroll Verisi</span><span class="stat-value">${l.hasInfiniteScroll ? '✅ Tespit Edildi' : '❌ Yok'}</span></div>
       <div class="stat-row"><span class="stat-label">Hreflang</span><span class="stat-value">${(l.hreflangTags||[]).length > 0 ? (l.hreflangTags||[]).map(t=>`<span class="tag">${t.lang}</span>`).join('') : '—'}</span></div>
-      <div class="stat-row"><span class="stat-label">ARIA Label / Tab Order Hataları</span><span class="stat-value">${badge(l.missingAriaLabels||0, 0, 5, 'ariaLabels')} / ${badge(l.tabOrderIssues||0, 0, 5)}</span></div>
+
+      <div class="stat-group">Erişilebilirlik</div>
+      <div class="stat-row"><span class="stat-label">ARIA Label Eksik</span><span class="stat-value">${badge(l.missingAriaLabels||0, 0, 5, 'ariaLabels')}</span></div>
+      <div class="stat-row"><span class="stat-label">Tab Order Hataları</span><span class="stat-value">${badge(l.tabOrderIssues||0, 0, 5)}</span></div>
     </div>`;
   }
 
@@ -1611,14 +1643,18 @@
     const imgs = r.images || {};
     return `<div class="detail-panel">
       <div class="panel-title">📱 Mobil & Görsel</div>
-      <div class="stat-row"><span class="stat-label">Viewport Overflow</span><span class="stat-value">${badge(!m.viewportOverflow)}</span></div>
+
+      <div class="stat-group">Mobil Uyumluluk</div>
+      <div class="stat-row"><span class="stat-label">Viewport Taşması</span><span class="stat-value">${badge(!m.viewportOverflow)}</span></div>
       <div class="stat-row"><span class="stat-label">Yatay Scroll</span><span class="stat-value">${badge(!m.horizontalScroll)}</span></div>
-      <div class="stat-row"><span class="stat-label">Küçük Tap Target (Mobil)</span><span class="stat-value">${badge(m.smallTapTargets || 0, 5, 15, 'smallTapTargets')}</span></div>
+      <div class="stat-row"><span class="stat-label">Küçük Tap Target</span><span class="stat-value">${badge(m.smallTapTargets || 0, 5, 15, 'smallTapTargets')}</span></div>
       <div class="stat-row"><span class="stat-label">Font Boyutu Sorunları</span><span class="stat-value">${badge(m.fontSizeIssues || 0, 0, 10, 'fontSizeIssues')}</span></div>
+
+      <div class="stat-group">Görsel Optimizasyon</div>
       <div class="stat-row"><span class="stat-label">Toplam Görsel</span><span class="stat-value">${imgs.totalImages||0}</span></div>
-      <div class="stat-row"><span class="stat-label">Alt Eksik</span><span class="stat-value">${badge(imgs.imagesWithoutAlt || 0, 0, 5, 'imagesWithoutAlt')}</span></div>
-      <div class="stat-row"><span class="stat-label">Boyut Eksik</span><span class="stat-value">${badge(imgs.imagesWithoutDimensions || 0, 0, 5, 'imagesWithoutDimensions')}</span></div>
-      <div class="stat-row"><span class="stat-label">Lazy Loaded</span><span class="stat-value">${imgs.lazyLoadedImages||0}</span></div>
+      <div class="stat-row"><span class="stat-label">Alt Metni Eksik</span><span class="stat-value">${badge(imgs.imagesWithoutAlt || 0, 0, 5, 'imagesWithoutAlt')}</span></div>
+      <div class="stat-row"><span class="stat-label">Boyut Tanımsız</span><span class="stat-value">${badge(imgs.imagesWithoutDimensions || 0, 0, 5, 'imagesWithoutDimensions')}</span></div>
+      <div class="stat-row"><span class="stat-label">Lazy Load Uygulanan</span><span class="stat-value">${imgs.lazyLoadedImages||0}</span></div>
     </div>`;
   }
   // ─── INITIALIZATION & HISTORY LOADING ───
@@ -1629,6 +1665,7 @@
 
     if (pId && hId) {
       // History Mode
+      historyContext = { pId, hId };
       document.getElementById('searchSection').style.display = 'none';
       document.getElementById('emptyState').style.display = 'none';
       const banner = document.getElementById('historyBanner');
@@ -1651,6 +1688,18 @@
         console.error(e);
         alert('Rapor yüklenirken hata oluştu.');
       }
+    } else {
+      // Check if there are already completed results from the server (page refresh)
+      try {
+        const res = await fetch('/api/state');
+        const state = await res.json();
+        if (!state.running && state.results && state.results.length > 0) {
+          results = state.results;
+          document.getElementById('statusDot').classList.remove('running');
+          document.getElementById('statusText').textContent = 'Tamamlandı';
+          renderResults();
+        }
+      } catch {}
     }
   };
 </script>

@@ -15,7 +15,9 @@ async function auditMobile(url, TIMEOUT) {
 
   try {
     const { browser, context, page } = await launchMobileBrowser();
-    await page.goto(url, { waitUntil: "networkidle", timeout: TIMEOUT });
+    // Media-heavy pages may never reach networkidle due to long polling / analytics.
+    await page.goto(url, { waitUntil: "load", timeout: TIMEOUT });
+    await page.waitForLoadState("networkidle", { timeout: 3000 }).catch(() => {});
     await page.waitForTimeout(WAIT_AFTER_LOAD);
 
     const mobileData = await page.evaluate(() => {
@@ -76,4 +78,25 @@ async function auditMobile(url, TIMEOUT) {
   return mobileResult;
 }
 
-module.exports = { auditMobile };
+const MOBILE_AUDIT_TIMEOUT_MS = 60000;
+
+async function auditMobileWithTimeout(url, TIMEOUT) {
+  return Promise.race([
+    auditMobile(url, TIMEOUT),
+    new Promise((_, reject) =>
+      setTimeout(() => reject(new Error(`Mobile audit timeout after ${MOBILE_AUDIT_TIMEOUT_MS / 1000}s`)), MOBILE_AUDIT_TIMEOUT_MS)
+    ),
+  ]).catch(err => ({
+    smallTapTargets: 0,
+    smallTapTargetsList: [],
+    fontSizeIssues: 0,
+    fontSizeIssuesList: [],
+    horizontalScroll: false,
+    viewportOverflow: false,
+    title: null,
+    h1: [],
+    error: "Mobil test hatası: " + err.message,
+  }));
+}
+
+module.exports = { auditMobile: auditMobileWithTimeout };

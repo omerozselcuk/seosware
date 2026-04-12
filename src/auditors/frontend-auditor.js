@@ -125,7 +125,19 @@ function buildCategory(score, metrics, details = []) {
 }
 
 // CDP type (Script, Stylesheet, Image, Font, XHR, Fetch, Document, Other) -> internal type (js, css, image, font, other)
-function normalizeResourceType(cdpType, contentType) {
+function inferTypeFromUrl(resourceUrl) {
+  if (!resourceUrl || typeof resourceUrl !== 'string') return null;
+  try {
+    const pathname = new URL(resourceUrl).pathname.toLowerCase();
+    if (/\.(mjs|cjs|js)$/.test(pathname)) return 'js';
+    if (/\.css$/.test(pathname)) return 'css';
+    if (/\.(avif|webp|png|jpe?g|gif|svg|ico|bmp|tiff?)$/.test(pathname)) return 'image';
+    if (/\.(woff2?|ttf|otf|eot)$/.test(pathname)) return 'font';
+  } catch {}
+  return null;
+}
+
+function normalizeResourceType(cdpType, contentType, resourceUrl) {
   const t = (cdpType || '').toLowerCase();
   // CDP type first
   if (t === 'script') return 'js';
@@ -140,6 +152,11 @@ function normalizeResourceType(cdpType, contentType) {
   if (ct.includes('css')) return 'css';
   if (ct.includes('image/')) return 'image';
   if (ct.includes('font') || ct.includes('woff')) return 'font';
+
+  // Last resort: infer from URL extension.
+  const inferred = inferTypeFromUrl(resourceUrl);
+  if (inferred) return inferred;
+
   return 'other';
 }
 
@@ -147,6 +164,7 @@ function normalizeResourceType(cdpType, contentType) {
 
 async function auditPageWeight(cdp, networkData, page) {
   const resources = networkData.resources;
+  const typeStats = networkData.typeStats || {};
 
   const byType = {
     js:    { kb: 0, count: 0 },
@@ -165,7 +183,9 @@ async function auditPageWeight(cdp, networkData, page) {
   resources.forEach(r => {
     totalBytes += r.transferSize || 0;
     const kb = (r.transferSize || 0) / 1024;
-    const key = r.type || 'other';
+    let key = r.type || 'other';
+    // Keep page weight buckets stable even when upstream emits non-asset types.
+    if (!['js', 'css', 'image', 'font', 'other'].includes(key)) key = 'other';
     if (byType[key]) { byType[key].kb += kb; byType[key].count++; }
     else { byType.other.kb += kb; byType.other.count++; }
 
@@ -209,10 +229,13 @@ async function auditPageWeight(cdp, networkData, page) {
     imageKb: Math.round(byType.image.kb),
     fontKb:  Math.round(byType.font.kb),
     otherKb: Math.round(byType.other.kb),
+    otherCount: byType.other.count,
     jsCount:    byType.js.count,
     cssCount:   byType.css.count,
     imageCount: byType.image.count,
     fontCount:  byType.font.count,
+    unknownTypeCount: typeStats.other || 0,
+    unknownTypeRate: resources.length > 0 ? Math.round(((typeStats.other || 0) / resources.length) * 100) : 0,
     oversizedImages: oversizedImages.length,
     uncompressedCount: uncompressedJs.length + uncompressedCss.length,
     uncompressedKb: [...uncompressedJs, ...uncompressedCss].reduce((s,r) => s+r.sizeKb, 0),
@@ -363,77 +386,97 @@ async function auditDOMComplexity(page) {
 }
 
 async function auditJSComplexity(page, cdp, jsErrors, consoleWarnings) {
-  // JS Execution time via CDP Profiler
-  let execTimeMs = 0;
-  try {
-    await cdp.send('Profiler.enable');
-    await cdp.send('Profiler.start');
-    await page.evaluate(() => {
-      const end = Date.now() + 200;
-      while (Date.now() < end) {} // force tiny work so profiler captures something
-    });
-    const { profile } = await cdp.send('Profiler.stop');
-    if (profile?.nodes?.length) {
-      const totalHit = profile.nodes.reduce((s,n) => s + (n.hitCount||0), 0);
-      execTimeMs = Math.round(totalHit * (profile.timeDeltas?.reduce((a,b)=>a+b,0) || 0) / Math.max(profile.nodes.length, 1) / 1000);
-    }
-    await cdp.send('Profiler.disable');
-  } catch (_) {}
+  // Collect page.evaluate-based metrics FIRST, before any CDP Profiler attempt.
+  // The Profiler can crash the Chromium renderer on PWA/Service Worker pages,
+  // and once crashed, page.evaluate never works again. So we grab what we can first.
 
-  // DOM access, scroll listeners, globals from page
-  const jsData = await page.evaluate(() => {
-    // Global variables (non-standard window properties)
-    const defaultGlobals = new Set(['window','document','location','history','navigator','screen',
-      'alert','confirm','prompt','console','performance','setTimeout','setInterval','clearTimeout',
-      'clearInterval','fetch','XMLHttpRequest','WebSocket','Worker','Blob','File','FileReader',
-      'URL','URLSearchParams','Event','CustomEvent','EventTarget','Node','Element','HTMLElement',
-      'localStorage','sessionStorage','indexedDB','crypto','Intl','Math','Date','JSON','Object',
-      'Array','String','Number','Boolean','Function','Symbol','Map','Set','WeakMap','WeakSet',
-      'Promise','Proxy','Reflect','RegExp','Error','TypeError','RangeError','undefined','null',
-      'NaN','Infinity','isNaN','isFinite','parseInt','parseFloat','encodeURIComponent',
-      'decodeURIComponent','encodeURI','decodeURI','escape','unescape','eval','postMessage',
-      'requestAnimationFrame','cancelAnimationFrame','requestIdleCallback','queueMicrotask',
-      'structuredClone','gc','globalThis','self','top','parent','frames','opener',
-      'devicePixelRatio','innerWidth','innerHeight','outerWidth','outerHeight','pageXOffset',
-      'pageYOffset','scrollX','scrollY','screenX','screenY','scrollTo','scrollBy','scroll',
-      'resizeTo','resizeBy','moveTo','moveBy','open','close','stop','focus','blur','print',
-      'origin','name','status','closed','length','frameElement','onload','onerror','onunload',
-      'onbeforeunload','onhashchange','onpopstate','onmessage','onabort','onfocus','onblur',
-      'onresize','onscroll','onoffline','ononline']);
-
-    const globals = Object.keys(window).filter(k => !defaultGlobals.has(k) && !k.startsWith('__') && typeof window[k] !== 'function');
-
-    // DOM access approximation (count querySelectorAll calls done before)
-    const domAccessCount = window.__domAccessCount || 0;
-
-    // Scroll-bound event listeners (approximation via getEventListeners if available)
-    let scrollListeners = 0;
+  const safeEval = async (label, fn, fallback) => {
     try {
-      // Only works in DevTools context normally; fallback 0
+      const val = await Promise.race([
+        page.evaluate(fn),
+        new Promise((_, rej) => setTimeout(() => rej(new Error('evaluate timeout')), 5000)),
+      ]);
+      console.log(`[Frontend Auditor] safeEval OK: ${label} →`, JSON.stringify(val));
+      return val;
+    } catch (err) {
+      console.warn(`[Frontend Auditor] safeEval FAIL: ${label} — ${err.message}`);
+      return fallback;
+    }
+  };
+
+  // ── 1. DOM access count (patched by addInitScript before reload) ──
+  const domAccessCount = await safeEval('domAccess', () => window.__domAccessCount || 0, 0);
+
+  // ── 2. Scroll listeners — only available in DevTools context, usually 0 ──
+  const scrollListeners = await safeEval('scrollListeners', () => {
+    try {
       if (typeof getEventListeners !== 'undefined') {
-        scrollListeners = (getEventListeners(window)?.scroll || []).length;
+        return (getEventListeners(window)?.scroll || []).length;
       }
     } catch {}
+    return 0;
+  }, 0);
 
-    return { globals: globals.slice(0, 100), globalCount: globals.length, domAccessCount, scrollListeners };
-  });
+  // ── 3. Global variable count ──
+  const { globalCount, globalNames } = await safeEval('globals',
+    () => {
+      const dg = new Set(['window','document','location','history','navigator','screen',
+        'alert','confirm','prompt','console','performance','setTimeout','setInterval','clearTimeout',
+        'clearInterval','fetch','XMLHttpRequest','WebSocket','Worker','Blob','File','FileReader',
+        'URL','URLSearchParams','Event','CustomEvent','EventTarget','Node','Element','HTMLElement',
+        'localStorage','sessionStorage','indexedDB','crypto','Intl','Math','Date','JSON','Object',
+        'Array','String','Number','Boolean','Function','Symbol','Map','Set','WeakMap','WeakSet',
+        'Promise','Proxy','Reflect','RegExp','Error','TypeError','RangeError','undefined','null',
+        'NaN','Infinity','isNaN','isFinite','parseInt','parseFloat','encodeURIComponent',
+        'decodeURIComponent','encodeURI','decodeURI','escape','unescape','eval','postMessage',
+        'requestAnimationFrame','cancelAnimationFrame','requestIdleCallback','queueMicrotask',
+        'structuredClone','gc','globalThis','self','top','parent','frames','opener',
+        'devicePixelRatio','innerWidth','innerHeight','outerWidth','outerHeight','pageXOffset',
+        'pageYOffset','scrollX','scrollY','screenX','screenY','scrollTo','scrollBy','scroll',
+        'resizeTo','resizeBy','moveTo','moveBy','open','close','stop','focus','blur','print',
+        'origin','name','status','closed','length','frameElement','onload','onerror','onunload',
+        'onbeforeunload','onhashchange','onpopstate','onmessage','onabort','onfocus','onblur',
+        'onresize','onscroll','onoffline','ononline']);
+      const globals = Object.keys(window).filter(k => !dg.has(k) && !k.startsWith('__') && typeof window[k] !== 'function');
+      return { globalCount: globals.length, globalNames: globals.slice(0, 20) };
+    },
+    { globalCount: 0, globalNames: [] }
+  );
+
+  // ── 4. JS Execution time via PerformanceLongTaskTiming + scripting entries ──
+  // We avoid CDP Profiler entirely — it crashes the Chromium renderer on PWA/SW pages.
+  // Instead, sum up script-processing time from the Resource Timing API.
+  let execTimeMs = await safeEval('execTime', () => {
+    try {
+      // Sum all script evaluation / long task durations
+      let total = 0;
+      // longtask entries (if PerformanceObserver buffered them)
+      const longTasks = performance.getEntriesByType?.('longtask') || [];
+      total += longTasks.reduce((s, e) => s + e.duration, 0);
+      // If no longtask entries, fallback: sum script resource durations
+      if (total === 0) {
+        const scripts = performance.getEntriesByType('resource').filter(e => e.initiatorType === 'script');
+        total = scripts.reduce((s, e) => s + e.duration, 0);
+      }
+      return Math.round(total);
+    } catch { return 0; }
+  }, 0);
 
   const metrics = {
-    execTimeMs: execTimeMs,
-    domAccess: jsData.domAccessCount,
-    scrollListeners: jsData.scrollListeners,
-    globalVariables: jsData.globalCount,
+    execTimeMs,
+    domAccess: domAccessCount,
+    scrollListeners,
+    globalVariables: globalCount,
   };
 
   const scores = [
     scoreMetric(execTimeMs, THRESHOLDS.jsComplexity.execTimeMs.good, THRESHOLDS.jsComplexity.execTimeMs.bad),
-    scoreMetric(jsData.domAccessCount, THRESHOLDS.jsComplexity.domAccess.good, THRESHOLDS.jsComplexity.domAccess.bad),
-    scoreMetric(jsData.scrollListeners, THRESHOLDS.jsComplexity.scrollListeners.good, THRESHOLDS.jsComplexity.scrollListeners.bad),
-    scoreMetric(jsData.globalCount, THRESHOLDS.jsComplexity.globals.good, THRESHOLDS.jsComplexity.globals.bad),
+    scoreMetric(domAccessCount, THRESHOLDS.jsComplexity.domAccess.good, THRESHOLDS.jsComplexity.domAccess.bad),
+    scoreMetric(scrollListeners, THRESHOLDS.jsComplexity.scrollListeners.good, THRESHOLDS.jsComplexity.scrollListeners.bad),
+    scoreMetric(globalCount, THRESHOLDS.jsComplexity.globals.good, THRESHOLDS.jsComplexity.globals.bad),
   ];
-  const score = Math.round(scores.reduce((a,b) => a+b, 0) / scores.length);
-
-  const details = jsData.globals.slice(0, 20).map(g => ({ type: 'global-var', name: g }));
+  const score = Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
+  const details = globalNames.map(g => ({ type: 'global-var', name: g }));
 
   return buildCategory(score, metrics, details);
 }
@@ -787,7 +830,7 @@ async function auditWebFonts(networkData) {
 
 // ─── Network Data Collector (CDP) ─────────────────────────────────────────────
 
-async function collectNetworkData(cdp, page, url) {
+async function collectNetworkData(cdp, page, url, signal = { cancelled: false }) {
   const resources = new Map(); // requestId -> resource info
   const responseBodyMap = new Map(); // requestId -> body (only for small JS/CSS)
 
@@ -796,7 +839,7 @@ async function collectNetworkData(cdp, page, url) {
   const onRequestWillBeSent = ({ requestId, request, type }) => {
     resources.set(requestId, {
       url: request.url,
-      type: normalizeResourceType(type),
+      type: normalizeResourceType(type, '', request.url),
       status: null,
       transferSize: 0,
       protocol: null,
@@ -818,7 +861,7 @@ async function collectNetworkData(cdp, page, url) {
     res.protocol = response.protocol;
     // Normalize type: prefer responseReceived type, fallback to content-type header
     const ct = response.headers?.['content-type'] || response.headers?.['Content-Type'] || '';
-    res.type = normalizeResourceType(type, ct);
+    res.type = normalizeResourceType(type, ct, response.url || res.url);
     res.headers = response.headers || {};
   };
 
@@ -831,12 +874,13 @@ async function collectNetworkData(cdp, page, url) {
   cdp.on('Network.responseReceived', onResponseReceived);
   cdp.on('Network.loadingFinished', onLoadingFinished);
 
-  // Page navigates — wait for it
+  // Page navigates — wait for it.
+  // We use 'load' (not 'networkidle') because media-heavy sites with video players,
+  // analytics heartbeats, and PWA polling NEVER reach networkidle.
+  // After load we give the page a capped 5-second networkidle grace period, then move on.
   try {
     await page.reload({ waitUntil: 'load', timeout: 30000 });
-    // Attempt to wait for networkidle but don't hang if it doesn't happen
-    await page.waitForLoadState('networkidle').catch(() => {});
-    await page.waitForTimeout(2000);
+    await page.waitForLoadState('networkidle', { timeout: 3000 }).catch(() => {});
   } catch (e) {
     console.warn('[Frontend Auditor] Reload timeout/error, continuing anyway:', e.message);
   }
@@ -847,6 +891,10 @@ async function collectNetworkData(cdp, page, url) {
 
   // Fetch bodies for small JS/CSS (body hash + minification check)
   const resourceArr = [...resources.values()];
+
+  // If already cancelled by the outer timeout, skip all enrichment steps.
+  if (signal.cancelled) return { resources: resourceArr, originUrl: url, typeStats: resourceArr.reduce((acc, r) => { acc[r.type || 'other'] = (acc[r.type || 'other'] || 0) + 1; return acc; }, {}) };
+
   const bodyTargets = resourceArr.filter(r =>
     (r.type === 'js' || r.type === 'css') && r.transferSize < 500 * 1024 && r.status === 200
   ).slice(0, 30);
@@ -858,7 +906,7 @@ async function collectNetworkData(cdp, page, url) {
       // Use a timeout for body fetching to avoid hanging
       const response = await Promise.race([
         cdp.send('Network.getResponseBody', { requestId: reqId }),
-        new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 2000))
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 1000))
       ]);
       const body = response.body;
       res.responseBody = body;
@@ -872,25 +920,57 @@ async function collectNetworkData(cdp, page, url) {
     } catch {}
   }));
 
-  // Enrich image data (display size, hidden, below fold)
+  // ── Enrich transferSize via PerformanceResourceTiming ────────────────────────
+  // Service Workers (PWA) serve most resources from cache, so CDP's encodedDataLength
+  // is 0 for those requests. PerformanceResourceTiming always exposes decodedBodySize
+  // (actual body bytes) regardless of SW cache, making it a reliable size fallback.
+  if (signal.cancelled) return { resources: resourceArr, originUrl: url, typeStats: resourceArr.reduce((acc, r) => { acc[r.type || 'other'] = (acc[r.type || 'other'] || 0) + 1; return acc; }, {}) };
   try {
-    const imageData = await page.evaluate(() => {
-      const imgs = [...document.images];
-      return imgs.map(img => {
-        const rect = img.getBoundingClientRect();
-        const style = window.getComputedStyle(img);
-        return {
-          src: img.src || img.currentSrc || '',
-          naturalWidth: img.naturalWidth,
-          naturalHeight: img.naturalHeight,
-          displayWidth: rect.width,
-          displayHeight: rect.height,
-          isHidden: style.display === 'none' || style.visibility === 'hidden' || parseFloat(style.opacity) === 0,
-          isBelowFold: rect.top > window.innerHeight,
-          hasLazyLoad: img.loading === 'lazy' || img.hasAttribute('data-src') || img.hasAttribute('data-lazy'),
-        };
-      });
+    const perfEntries = await Promise.race([
+      page.evaluate(() =>
+        performance.getEntriesByType('resource').map(e => ({
+          name: e.name,
+          transferSize: e.transferSize,
+          encodedBodySize: e.encodedBodySize,
+          decodedBodySize: e.decodedBodySize,
+        }))
+      ),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('perfEntries timeout')), 5000)),
+    ]);
+    const perfMap = new Map(perfEntries.map(e => [e.name, e]));
+    resourceArr.forEach(r => {
+      if ((r.transferSize || 0) === 0) {
+        const p = perfMap.get(r.url);
+        if (p && p.decodedBodySize > 0) {
+          r.transferSize = p.decodedBodySize;
+        }
+      }
     });
+  } catch {}
+
+  // ── Enrich image data (display size, hidden, below fold) ─────────────────────
+  if (signal.cancelled) return { resources: resourceArr, originUrl: url, typeStats: resourceArr.reduce((acc, r) => { acc[r.type || 'other'] = (acc[r.type || 'other'] || 0) + 1; return acc; }, {}) };
+  try {
+    const imageData = await Promise.race([
+      page.evaluate(() => {
+        const imgs = [...document.images];
+        return imgs.map(img => {
+          const rect = img.getBoundingClientRect();
+          const style = window.getComputedStyle(img);
+          return {
+            src: img.src || img.currentSrc || '',
+            naturalWidth: img.naturalWidth,
+            naturalHeight: img.naturalHeight,
+            displayWidth: rect.width,
+            displayHeight: rect.height,
+            isHidden: style.display === 'none' || style.visibility === 'hidden' || parseFloat(style.opacity) === 0,
+            isBelowFold: rect.top > window.innerHeight,
+            hasLazyLoad: img.loading === 'lazy' || img.hasAttribute('data-src') || img.hasAttribute('data-lazy'),
+          };
+        });
+      }),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('imageData timeout')), 5000)),
+    ]);
 
     imageData.forEach(img => {
       // Find matching resource
@@ -904,7 +984,13 @@ async function collectNetworkData(cdp, page, url) {
     });
   } catch {}
 
-  return { resources: resourceArr, originUrl: url };
+  const typeStats = resourceArr.reduce((acc, r) => {
+    const key = r.type || 'other';
+    acc[key] = (acc[key] || 0) + 1;
+    return acc;
+  }, {});
+
+  return { resources: resourceArr, originUrl: url, typeStats };
 }
 
 // ─── Main Export ──────────────────────────────────────────────────────────────
@@ -917,12 +1003,18 @@ async function auditFrontend(page, url) {
     categories: {},
   };
 
+  // Cap ALL Playwright page operations (navigate, evaluate, click…) to 20 s.
+  // This prevents any single page.evaluate() from hanging indefinitely.
+  const prevDefaultTimeout = page.context()._timeoutSettings?._defaultTimeout ?? null;
+  page.setDefaultTimeout(20000);
+
   let cdp;
   try {
     cdp = await page.context().newCDPSession(page);
   } catch (e) {
     console.error('[Frontend Auditor] CDP session başlatılamadı:', e.message);
     result.error = e.message;
+    page.setDefaultTimeout(prevDefaultTimeout ?? 30000);
     return result;
   }
 
@@ -933,6 +1025,24 @@ async function auditFrontend(page, url) {
   page.on('console', msg => {
     if (msg.type() === 'warning' || msg.type() === 'error') consoleWarningsCount.count++;
   });
+
+  const runCategory = async (name, fn, timeoutMs = 20000) => {
+    const startedAt = Date.now();
+    console.log(`[Frontend Auditor] Category start: ${name}`);
+    try {
+      const value = await Promise.race([
+        fn(),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error(`${name} timeout after ${Math.round(timeoutMs / 1000)}s`)), timeoutMs)
+        ),
+      ]);
+      console.log(`[Frontend Auditor] Category done: ${name} (${Date.now() - startedAt}ms)`);
+      return value;
+    } catch (e) {
+      console.warn(`[Frontend Auditor] Category failed: ${name} (${Date.now() - startedAt}ms) - ${e.message}`);
+      return buildCategory(0, { error: e.message }, []);
+    }
+  };
 
   // Inject document.write and sync XHR counters before reload
   await page.addInitScript(() => {
@@ -967,8 +1077,28 @@ async function auditFrontend(page, url) {
   });
 
   try {
-    // Collect network data (includes page.reload internally)
-    const networkData = await collectNetworkData(cdp, page, url);
+    // Collect network data (includes page.reload internally).
+    // Hard-cap at 50 s: on PWA/staging pages the reload+CDP can run indefinitely.
+    // If it times out, fall back to empty data so the DOM/JS/CSS categories still run.
+    // The signal object lets us cancel the still-running collectNetworkData's page.evaluate
+    // calls so they don't block the category audits' Playwright queue.
+    const networkSignal = { cancelled: false };
+    const networkData = await Promise.race([
+      collectNetworkData(cdp, page, url, networkSignal),
+      new Promise(resolve =>
+        setTimeout(() => {
+          console.warn('[Frontend Auditor] collectNetworkData timeout after 50s, proceeding with empty network data');
+          networkSignal.cancelled = true;
+          // Stop any pending navigation (page.reload inside collectNetworkData)
+          // so the page target doesn't crash mid-category and cause "Target crashed" errors.
+          page.evaluate(() => window.stop()).catch(() => {});
+          resolve({ resources: [], originUrl: url, typeStats: {} });
+        }, 50000)
+      ),
+    ]);
+
+    // Give the page a moment to stabilise after stopping any pending navigation.
+    await page.waitForLoadState('domcontentloaded', { timeout: 5000 }).catch(() => {});
 
     // Run all category auditors in parallel where possible
     const [
@@ -982,15 +1112,15 @@ async function auditFrontend(page, url) {
       serverConfig,
       webFonts,
     ] = await Promise.all([
-      auditPageWeight(cdp, networkData, page).catch(e => buildCategory(0, { error: e.message }, [])),
-      auditRequests(networkData).catch(e => buildCategory(0, { error: e.message }, [])),
-      auditDOMComplexity(page).catch(e => buildCategory(0, { error: e.message }, [])),
-      auditJSComplexity(page, cdp, jsErrors, consoleWarningsCount.count).catch(e => buildCategory(0, { error: e.message }, [])),
-      auditBadJS(page, jsErrors, consoleWarningsCount.count).catch(e => buildCategory(0, { error: e.message }, [])),
-      auditCSSComplexity(page).catch(e => buildCategory(0, { error: e.message }, [])),
-      auditBadCSS(page).catch(e => buildCategory(0, { error: e.message }, [])),
-      auditServerConfig(networkData).catch(e => buildCategory(0, { error: e.message }, [])),
-      auditWebFonts(networkData).catch(e => buildCategory(0, { error: e.message }, [])),
+      runCategory('pageWeight', () => auditPageWeight(cdp, networkData, page)),
+      runCategory('requests', () => auditRequests(networkData)),
+      runCategory('domComplexity', () => auditDOMComplexity(page)),
+      runCategory('jsComplexity', () => auditJSComplexity(page, cdp, jsErrors, consoleWarningsCount.count)),
+      runCategory('badJs', () => auditBadJS(page, jsErrors, consoleWarningsCount.count)),
+      runCategory('cssComplexity', () => auditCSSComplexity(page)),
+      runCategory('badCss', () => auditBadCSS(page)),
+      runCategory('serverConfig', () => auditServerConfig(networkData)),
+      runCategory('webFonts', () => auditWebFonts(networkData)),
     ]);
 
     result.categories = {
@@ -1032,11 +1162,36 @@ async function auditFrontend(page, url) {
     console.error('[Frontend Auditor] Hata:', err.message);
     result.error = err.message;
   } finally {
-    try { await cdp.detach(); } catch {}
+    // cdp.detach() can hang indefinitely when the CDP session has pending calls
+    // (e.g. Profiler.takePreciseCoverage timed-out but not cancelled, or a
+    // dangling page.reload). Cap it at 3 s so auditFrontend always returns fast.
+    try {
+      await Promise.race([
+        cdp.detach(),
+        new Promise(resolve => setTimeout(resolve, 3000)),
+      ]);
+    } catch {}
+    // Restore original timeout so subsequent auditors aren't affected.
+    try { page.setDefaultTimeout(prevDefaultTimeout ?? 30000); } catch {}
   }
 
   console.log(`[✓] Frontend audit tamamlandı: ${result.globalGrade} (${result.globalScore}/100)`);
   return result;
 }
 
-module.exports = { auditFrontend };
+// Wrap auditFrontend with a hard deadline so a hanging page can never block the whole audit.
+const FRONTEND_AUDIT_TIMEOUT_MS = 120000; // 120 seconds max
+
+async function auditFrontendWithTimeout(page, url) {
+  return Promise.race([
+    auditFrontend(page, url),
+    new Promise((_, reject) =>
+      setTimeout(() => reject(new Error(`Frontend audit timeout after ${FRONTEND_AUDIT_TIMEOUT_MS / 1000}s`)), FRONTEND_AUDIT_TIMEOUT_MS)
+    ),
+  ]).catch(err => {
+    console.error(`[Frontend Auditor] Timeout/Error: ${err.message}`);
+    return { globalScore: 0, globalGrade: 'F', categories: {}, error: err.message };
+  });
+}
+
+module.exports = { auditFrontend: auditFrontendWithTimeout };

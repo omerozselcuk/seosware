@@ -122,7 +122,10 @@ async function runAudit(url, config = {}) {
       }
     });
     
-    const response = await page.goto(url, { waitUntil: "networkidle", timeout: TIMEOUT });
+    // "networkidle" is never reached on media-heavy sites (video players, analytics, PWA heartbeats).
+    // Using "load" ensures we proceed as soon as the main document and sub-resources finish,
+    // which is what SEO crawlers see anyway.
+    const response = await page.goto(url, { waitUntil: "load", timeout: TIMEOUT });
     await page.waitForTimeout(WAIT_AFTER_LOAD);
     result.loadTime = Date.now() - startTime;
     result.status = response?.status();
@@ -151,7 +154,16 @@ async function runAudit(url, config = {}) {
     console.log(`[\u2139] Running AI Search audit for: ${url}`);
     result.aiSearch = await auditAISearch(page, url, TIMEOUT);
 
-    // 5. Frontend Quality Audit
+    // 5. Screenshot — capture what the browser actually rendered
+    try {
+      const screenshotBuf = await page.screenshot({ fullPage: false, type: 'jpeg', quality: 80 });
+      result.screenshot = screenshotBuf.toString('base64');
+      console.log(`[\u2139] Screenshot captured (${Math.round(screenshotBuf.length / 1024)} KB)`);
+    } catch (ssErr) {
+      console.warn(`[\u26A0] Screenshot failed: ${ssErr.message}`);
+    }
+
+    // 6. Frontend Quality Audit
     console.log(`[\u2139] Running Frontend audit for: ${url}`);
     result.frontend = await auditFrontend(page, url);
 

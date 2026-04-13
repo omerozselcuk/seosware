@@ -27,3 +27,4 @@ src/debug_cls.js
 /blob-report/
 /playwright/.cache/
 /playwright/.auth/
+.antigravity:rules

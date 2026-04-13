@@ -5,16 +5,19 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Seosware — Advanced SEO Auditor Dashboard</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,400..700,1,0" rel="stylesheet">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
       --bg-primary: #0a0e1a;
       --bg-secondary: #0f172a;
+      --bg-tertiary: #131d32;
       --bg-card: rgba(33, 40, 54, 0.75);
       --bg-card-hover: rgba(45, 55, 75, 0.85);
       --bg-glass: rgba(255,255,255,0.03);
       --border: rgba(255,255,255,0.08);
+      --border-strong: rgba(255,255,255,0.14);
       --border-hover: rgba(0, 246, 255, 0.3);
       --text-primary: #f8fafc;
       --text-secondary: #94a3b8;
@@ -33,15 +36,55 @@
       --radius: 16px;
       --radius-sm: 10px;
       --shadow: 0 12px 40px rgba(0,0,0,0.4);
+      --shadow-soft: 0 18px 60px rgba(2, 6, 23, 0.28);
+      --shadow-strong: 0 24px 80px rgba(2, 6, 23, 0.5);
     }
 
     body {
       font-family: 'Inter', -apple-system, sans-serif;
-      background: var(--bg-primary);
+      background: radial-gradient(circle at top, rgba(0, 246, 255, 0.08), transparent 30%), var(--bg-primary);
       color: var(--text-primary);
       min-height: 100vh;
       line-height: 1.6;
       overflow-x: hidden;
+    }
+
+    .icon {
+      font-family: 'Material Symbols Rounded';
+      font-weight: normal;
+      font-style: normal;
+      font-size: 20px;
+      line-height: 1;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      letter-spacing: normal;
+      text-transform: none;
+      white-space: nowrap;
+      word-wrap: normal;
+      direction: ltr;
+      -webkit-font-feature-settings: 'liga';
+      font-feature-settings: 'liga';
+      -webkit-font-smoothing: antialiased;
+      font-variation-settings: 'FILL' 1, 'wght' 600, 'GRAD' 0, 'opsz' 24;
+      flex-shrink: 0;
+    }
+
+    .icon-sm { font-size: 16px; }
+    .icon-lg { font-size: 28px; }
+    .icon-xl { font-size: 40px; }
+
+    .icon-chip {
+      width: 42px;
+      height: 42px;
+      border-radius: 14px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03));
+      border: 1px solid var(--border-strong);
+      color: var(--accent-light);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.08);
     }
 
     /* Ambient background */
@@ -102,7 +145,7 @@
     }
     .clickable-row { cursor: pointer; transition: background 0.2s; }
     .clickable-row:hover { background: var(--bg-glass); }
-    .clickable-row::after { content: ' 🔍'; font-size: 12px; opacity: 0.6; }
+    .clickable-row::after { content: ' Detay'; font-size: 12px; opacity: 0.6; }
 
     .empty-detail {
       padding: 40px;
@@ -129,6 +172,37 @@
       background: rgba(10,14,26,0.8);
     }
 
+    .nav-links {
+      display: flex;
+      gap: 10px;
+      margin-right: auto;
+      margin-left: 40px;
+      padding: 6px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: rgba(255,255,255,0.03);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
+    }
+
+    .nav-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 600;
+      padding: 10px 14px;
+      border-radius: 999px;
+      transition: all 0.2s ease;
+    }
+
+    .nav-link:hover,
+    .nav-link.active {
+      color: var(--text-primary);
+      background: linear-gradient(180deg, rgba(255,255,255,0.1), rgba(255,255,255,0.04));
+    }
+
     .logo {
       display: flex;
       align-items: center;
@@ -152,6 +226,7 @@
       font-size: 22px;
       font-weight: 700;
       background: linear-gradient(135deg, var(--text-primary), var(--accent-light));
+      background-clip: text;
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
     }
@@ -191,25 +266,34 @@
     }
 
     /* === MAIN LAYOUT === */
+    .search-section,
+    .history-banner {
+      max-width: 1400px;
+      margin: 24px auto 0;
+      padding: 0 40px;
+    }
+
     .container {
       max-width: 1400px;
       margin: 0 auto;
-      padding: 32px 40px;
+      padding: 28px 40px 64px;
     }
 
     /* === INPUT SECTION === */
     .input-section {
-      background: var(--bg-card);
+      background: linear-gradient(180deg, rgba(20, 27, 43, 0.92), rgba(13, 18, 30, 0.9));
       border: 1px solid var(--border);
       border-radius: var(--radius);
       padding: 32px;
-      margin-bottom: 32px;
-      backdrop-filter: blur(10px);
-      transition: border-color 0.3s;
+      margin-bottom: 40px;
+      backdrop-filter: blur(16px);
+      transition: border-color 0.3s, transform 0.2s ease, box-shadow 0.2s ease;
+      box-shadow: var(--shadow-soft);
     }
 
     .input-section:hover {
       border-color: var(--border-hover);
+      transform: translateY(-1px);
     }
 
     .section-title {
@@ -218,7 +302,13 @@
       margin-bottom: 4px;
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 12px;
+    }
+
+    .section-title .icon-chip {
+      width: 38px;
+      height: 38px;
+      border-radius: 12px;
     }
 
     .section-subtitle {
@@ -235,7 +325,7 @@
 
     .url-input {
       flex: 1;
-      background: rgba(0,0,0,0.3);
+      background: rgba(255,255,255,0.03);
       border: 1px solid var(--border);
       border-radius: var(--radius-sm);
       padding: 14px 18px;
@@ -256,22 +346,24 @@
     .btn {
       padding: 14px 24px;
       border-radius: var(--radius-sm);
-      border: none;
+      border: 1px solid transparent;
       font-family: 'Inter', sans-serif;
       font-size: 14px;
       font-weight: 600;
       cursor: pointer;
-      transition: all 0.2s;
+      transition: all 0.2s ease;
       display: inline-flex;
       align-items: center;
-      gap: 8px;
+      justify-content: center;
+      gap: 10px;
       white-space: nowrap;
+      box-shadow: 0 10px 24px rgba(2, 6, 23, 0.16);
     }
 
     .btn-add {
-      background: var(--bg-glass);
+      background: rgba(255,255,255,0.04);
       color: var(--text-secondary);
-      border: 1px solid var(--border);
+      border-color: var(--border);
     }
 
     .btn-add:hover {
@@ -281,14 +373,26 @@
     }
 
     .btn-primary {
-      background: linear-gradient(135deg, var(--accent), #7c3aed);
+      background: linear-gradient(135deg, #08d9ff, #7c3aed);
       color: white;
-      box-shadow: 0 4px 16px rgba(99,102,241,0.3);
+      box-shadow: 0 10px 24px rgba(99,102,241,0.32);
     }
 
     .btn-primary:hover {
       transform: translateY(-1px);
-      box-shadow: 0 6px 24px rgba(99,102,241,0.4);
+      box-shadow: 0 14px 28px rgba(99,102,241,0.4);
+    }
+
+    .btn-outline {
+      background: rgba(255,255,255,0.03);
+      border-color: var(--border);
+      color: var(--text-secondary);
+    }
+
+    .btn-outline:hover {
+      border-color: var(--border-hover);
+      color: var(--text-primary);
+      background: rgba(255,255,255,0.05);
     }
 
     .btn-primary:disabled {
@@ -298,11 +402,12 @@
     }
 
     .btn-danger {
-      background: transparent;
+      background: rgba(232, 63, 87, 0.05);
       color: var(--red);
       border: 1px solid rgba(248,113,113,0.2);
       padding: 6px 12px;
       font-size: 12px;
+      box-shadow: none;
     }
 
     .btn-danger:hover { background: var(--red-bg); }
@@ -318,7 +423,7 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      background: rgba(0,0,0,0.2);
+      background: rgba(255,255,255,0.03);
       border: 1px solid var(--border);
       border-radius: var(--radius-sm);
       padding: 10px 16px;
@@ -358,12 +463,13 @@
     /* === PROGRESS === */
     .progress-section {
       display: none;
-      background: var(--bg-card);
+      background: linear-gradient(180deg, rgba(20, 27, 43, 0.92), rgba(13, 18, 30, 0.9));
       border: 1px solid var(--border);
       border-radius: var(--radius);
       padding: 28px 32px;
-      margin-bottom: 32px;
-      backdrop-filter: blur(10px);
+      margin-bottom: 40px;
+      backdrop-filter: blur(16px);
+      box-shadow: var(--shadow-soft);
     }
 
     .progress-section.active { display: block; }
@@ -417,16 +523,17 @@
 
     /* === RESULTS === */
     .results-section { display: none; }
-    .results-section.active { display: block; }
+    .results-section.active { display: block; margin-top: 8px; }
 
     .results-tabs {
       display: flex;
       gap: 4px;
       margin-bottom: 24px;
-      background: rgba(0,0,0,0.2);
+      background: rgba(255,255,255,0.03);
       padding: 4px;
       border-radius: var(--radius-sm);
       overflow-x: auto;
+      border: 1px solid var(--border);
     }
 
     .tab-btn {
@@ -444,9 +551,9 @@
     }
 
     .tab-btn.active {
-      background: var(--accent);
+      background: linear-gradient(135deg, #08d9ff, #7c3aed);
       color: white;
-      box-shadow: 0 2px 8px rgba(99,102,241,0.3);
+      box-shadow: 0 8px 16px rgba(99,102,241,0.25);
     }
 
     .tab-btn:hover:not(.active) {
@@ -464,24 +571,25 @@
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
       gap: 20px;
-      margin-bottom: 28px;
+      margin-bottom: 36px;
     }
 
     .score-card {
-      background: var(--bg-card);
+      background: linear-gradient(180deg, rgba(20, 27, 43, 0.94), rgba(13, 18, 30, 0.92));
       border: 1px solid var(--border);
       border-radius: var(--radius);
       padding: 24px;
-      backdrop-filter: blur(10px);
+      backdrop-filter: blur(16px);
       transition: all 0.3s;
       position: relative;
       overflow: hidden;
+      box-shadow: var(--shadow-soft);
     }
 
     .score-card:hover {
       border-color: var(--border-hover);
       transform: translateY(-2px);
-      box-shadow: var(--shadow);
+      box-shadow: var(--shadow-strong);
     }
 
     .score-card::before {
@@ -505,6 +613,12 @@
       margin-bottom: 16px;
     }
 
+    .card-header-main {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
     .card-label {
       font-size: 13px;
       color: var(--text-muted);
@@ -514,8 +628,16 @@
     }
 
     .card-icon {
-      font-size: 20px;
-      opacity: 0.7;
+      width: 44px;
+      height: 44px;
+      border-radius: 14px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--border-strong);
+      color: var(--accent-light);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.08);
     }
 
     .card-value {
@@ -574,24 +696,25 @@
     .detail-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-      gap: 20px;
+      gap: 24px;
     }
 
     .detail-panel {
-      background: var(--bg-card);
+      background: linear-gradient(180deg, rgba(20, 27, 43, 0.94), rgba(13, 18, 30, 0.92));
       border: 1px solid var(--border);
       border-radius: var(--radius);
       padding: 24px;
-      backdrop-filter: blur(10px);
+      backdrop-filter: blur(16px);
       position: relative;
       overflow: hidden;
       transition: all 0.3s;
+      box-shadow: var(--shadow-soft);
     }
 
     .detail-panel:hover {
       border-color: var(--border-hover);
       transform: translateY(-2px);
-      box-shadow: var(--shadow);
+      box-shadow: var(--shadow-strong);
     }
 
     .detail-panel::before {
@@ -612,19 +735,26 @@
     .panel-title {
       font-size: 15px;
       font-weight: 600;
-      margin-bottom: 16px;
+      margin-bottom: 18px;
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 10px;
+    }
+
+    .panel-title .icon-chip {
+      width: 34px;
+      height: 34px;
+      border-radius: 12px;
     }
 
     .stat-row {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 10px 0;
+      padding: 12px 0;
       border-bottom: 1px solid var(--border);
       font-size: 13px;
+      gap: 14px;
     }
 
     .stat-row:last-child { border-bottom: none; }
@@ -649,25 +779,27 @@
     .badge {
       display: inline-flex;
       align-items: center;
-      gap: 4px;
-      padding: 3px 10px;
+      gap: 6px;
+      padding: 5px 10px;
       border-radius: 20px;
       font-size: 12px;
       font-weight: 600;
+      border: 1px solid transparent;
     }
 
-    .badge-green { background: var(--green-bg); color: var(--green); }
-    .badge-yellow { background: var(--yellow-bg); color: var(--yellow); }
-    .badge-red { background: var(--red-bg); color: var(--red); }
+    .badge-green { background: var(--green-bg); color: var(--green); border-color: rgba(0, 246, 255, 0.14); }
+    .badge-yellow { background: var(--yellow-bg); color: var(--yellow); border-color: rgba(251,191,36,0.2); }
+    .badge-red { background: var(--red-bg); color: var(--red); border-color: rgba(232,63,87,0.18); }
 
     .tag {
       display: inline-block;
-      padding: 2px 8px;
+      padding: 4px 10px;
       background: rgba(255,255,255,0.05);
-      border-radius: 4px;
+      border-radius: 999px;
       font-size: 11px;
       color: var(--text-muted);
       margin: 2px;
+      border: 1px solid rgba(255,255,255,0.06);
     }
 
     /* AI Grade Badge */
@@ -696,9 +828,10 @@
       align-items: center;
       justify-content: space-between;
       padding: 8px 12px;
-      background: rgba(0,0,0,0.2);
-      border-radius: 8px;
+      background: rgba(255,255,255,0.04);
+      border-radius: 10px;
       font-size: 13px;
+      border: 1px solid rgba(255,255,255,0.06);
     }
 
     .bot-name { font-weight: 500; }
@@ -726,8 +859,11 @@
 
     /* Responsive */
     @media (max-width: 768px) {
-      .container { padding: 16px; }
+      .search-section,
+      .history-banner { padding: 0 16px; margin-top: 16px; }
+      .container { padding: 20px 16px 44px; }
       .header { padding: 16px 20px; }
+      .nav-links { display: none; }
       .detail-grid { grid-template-columns: 1fr; }
       .overview-grid { grid-template-columns: 1fr; }
     }
@@ -740,9 +876,17 @@
     }
 
     .empty-state-icon {
-      font-size: 48px;
-      margin-bottom: 16px;
-      opacity: 0.3;
+      width: 72px;
+      height: 72px;
+      border-radius: 24px;
+      margin: 0 auto 16px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--accent-light);
+      box-shadow: var(--shadow-soft);
     }
 
     .empty-state-text {
@@ -754,14 +898,15 @@
     /* History Banner */
   .history-banner {
     display: none;
-    background: linear-gradient(90deg, #1e1b4b, #312e81);
+    background: linear-gradient(135deg, rgba(30, 41, 59, 0.96), rgba(49, 46, 129, 0.88));
     color: white;
-    padding: 12px 24px;
-    border-radius: 12px;
-    margin-bottom: 24px;
+    padding: 16px 20px;
+    border-radius: 18px;
+    margin-bottom: 8px;
     align-items: center;
     justify-content: space-between;
-    border: 1px solid rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.12);
+    box-shadow: var(--shadow-soft);
   }
 
     /* AI Modal */
@@ -933,9 +1078,9 @@
     </div>
   </div>
   
-  <div style="display:flex; gap:20px; margin-right:auto; margin-left:40px;">
-    <a href="index.html" style="color:white; text-decoration:none; font-size:14px; font-weight:500;">Ad-Hoc Taramalar</a>
-    <a href="projects.html" style="color:var(--text-muted); text-decoration:none; font-size:14px; font-weight:500;">Projeler & Geçmiş</a>
+  <div class="nav-links">
+    <a href="index.html" class="nav-link active"><span class="icon icon-sm">travel_explore</span>Ad-Hoc Taramalar</a>
+    <a href="projects.html" class="nav-link"><span class="icon icon-sm">inventory_2</span>Projeler & Geçmiş</a>
   </div>
 
     <div class="header-status">
@@ -946,23 +1091,23 @@
 
   <div class="history-banner" id="historyBanner">
     <div style="display:flex; align-items:center; gap:12px;">
-      <span style="font-size:20px;">📅</span>
+      <span class="icon-chip"><span class="icon">calendar_month</span></span>
       <div>
         <div style="font-size:14px; font-weight:700;">Geçmiş Rapor İzleniyor</div>
         <div style="font-size:12px; opacity:0.7;" id="historyDate">10 Nisan 2026</div>
       </div>
     </div>
-    <button class="btn btn-primary" style="padding:4px 12px; font-size:12px;" onclick="window.location.href='index.html'">Yeni Tarama Yap</button>
+    <button class="btn btn-primary" style="padding:8px 14px; font-size:12px;" onclick="window.location.href='index.html'"><span class="icon icon-sm">refresh</span>Yeni Tarama Yap</button>
   </div>
 
   <div class="search-section" id="searchSection">
     <section class="input-section" id="inputSection">
-      <div class="section-title">🔗 Audit URL'leri</div>
+      <div class="section-title"><span class="icon-chip"><span class="icon">link</span></span>Audit URL'leri</div>
       <div class="section-subtitle">Taramak istediğiniz URL'leri ekleyin, sonra analizi başlatın.</div>
 
       <div class="url-input-wrapper">
         <input type="text" class="url-input" id="urlInput" placeholder="https://example.com" />
-        <button class="btn btn-add" onclick="addUrl()">+ Ekle</button>
+        <button class="btn btn-add" onclick="addUrl()"><span class="icon icon-sm">add</span>Ekle</button>
       </div>
 
       <div class="url-list" id="urlList"></div>
@@ -970,9 +1115,9 @@
       <div class="action-bar">
         <span class="url-count" id="urlCount">0 URL eklendi</span>
         <div style="display:flex;gap:12px">
-          <button class="btn btn-outline" id="clearBtn" onclick="clearUrls()" style="display:none">🧹 Temizle</button>
-          <button class="btn btn-primary" id="startBtn" onclick="startAudit()" disabled>⚡ Audit Başlat</button>
-          <button class="btn btn-outline" id="startSiteBtn" onclick="startSiteAudit()" disabled>🕷️ Site-wide Crawl</button>
+          <button class="btn btn-outline" id="clearBtn" onclick="clearUrls()" style="display:none"><span class="icon icon-sm">cleaning_services</span>Temizle</button>
+          <button class="btn btn-primary" id="startBtn" onclick="startAudit()" disabled><span class="icon icon-sm">bolt</span>Audit Başlat</button>
+          <button class="btn btn-outline" id="startSiteBtn" onclick="startSiteAudit()" disabled><span class="icon icon-sm">language</span>Site-wide Crawl</button>
         </div>
       </div>
     </section>
@@ -987,8 +1132,8 @@
   <!-- PROGRESS -->
   <section class="progress-section" id="progressSection">
     <div style="display:flex; justify-content:space-between; align-items:center;">
-      <div class="section-title">⏳ Audit çalışıyor...</div>
-      <button class="btn btn-danger" onclick="cancelAudit()" id="cancelBtn" style="padding: 6px 12px; font-size: 12px;">🛑 İptal Et</button>
+      <div class="section-title"><span class="icon-chip"><span class="icon">hourglass_top</span></span>Audit çalışıyor...</div>
+      <button class="btn btn-danger" onclick="cancelAudit()" id="cancelBtn" style="padding: 6px 12px; font-size: 12px;"><span class="icon icon-sm">stop_circle</span>İptal Et</button>
     </div>
     <div class="progress-bar-track">
       <div class="progress-bar-fill" id="progressBar"></div>
@@ -1005,8 +1150,8 @@
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; gap:16px;">
       <div class="results-tabs" id="resultsTabs" style="margin-bottom:0; flex:1; overflow-x:auto;"></div>
       <div style="display:flex; gap:8px; flex-shrink:0;">
-        <button class="btn btn-ai" id="aiAnalyzeBtn" onclick="openAdhocAiInsight()" style="padding:8px 16px; font-size:12px; display:none;">🤖 AI ile Yorumla</button>
-        <button class="btn btn-outline" id="jsonDownloadBtn" onclick="downloadResultsJson()" style="padding:8px 16px; font-size:12px; border-color:var(--accent); color:var(--accent); display:none;">📥 JSON İndir</button>
+        <button class="btn btn-ai" id="aiAnalyzeBtn" onclick="openAdhocAiInsight()" style="padding:8px 16px; font-size:12px; display:none;"><span class="icon icon-sm">auto_awesome</span>AI ile Yorumla</button>
+        <button class="btn btn-outline" id="jsonDownloadBtn" onclick="downloadResultsJson()" style="padding:8px 16px; font-size:12px; border-color:var(--accent); color:var(--accent); display:none;"><span class="icon icon-sm">download</span>JSON İndir</button>
       </div>
     </div>
     <div id="resultsContent"></div>
@@ -1014,7 +1159,7 @@
 
   <!-- EMPTY STATE -->
   <div class="empty-state" id="emptyState">
-    <div class="empty-state-icon">🔍</div>
+    <div class="empty-state-icon"><span class="icon icon-xl">manage_search</span></div>
     <div class="empty-state-text">Henüz bir audit sonucu yok</div>
     <div class="empty-state-sub">Yukarıya URL'lerinizi ekleyip analizi başlatın</div>
   </div>
@@ -1024,7 +1169,7 @@
   <!-- DETAILS MODAL -->
   <div class="details-modal" id="detailsModal">
     <div class="details-content">
-      <button class="details-close" onclick="closeDetails()">✕</button>
+      <button class="details-close" onclick="closeDetails()"><span class="icon icon-sm">close</span></button>
       <h2 id="detailsTitle" style="font-family:'Space Grotesk'; margin-bottom:10px;">Detaylar</h2>
       <p id="detailsSub" style="font-size: 14px; color: var(--text-muted); margin-bottom: 20px;">Hataların tam listesi aşağıdadır.</p>
       <div id="detailsTableContainer"></div>
@@ -1038,6 +1183,16 @@
   let eventSource = null;
   let currentActiveTabResult = null;
   let historyContext = null; // { pId, hId } when viewing project history
+
+  function icon(name, cls = '') {
+    return `<span class="icon ${cls}" aria-hidden="true">${name}</span>`;
+  }
+
+  function statusBadge(ok, okText = 'Uygun', badText = 'Eksik') {
+    return ok
+      ? `<span class="badge badge-green">${icon('check_circle', 'icon-sm')}${okText}</span>`
+      : `<span class="badge badge-red">${icon('cancel', 'icon-sm')}${badText}</span>`;
+  }
 
   // ─── URL MANAGEMENT ───
   const urlInput = document.getElementById('urlInput');
@@ -1071,7 +1226,7 @@
           <span class="url-item-num">${i+1}.</span>
           <span class="url-item-text">${u}</span>
         </div>
-        <button class="btn btn-danger" onclick="removeUrl(${i})">✕</button>
+        <button class="btn btn-danger" onclick="removeUrl(${i})">${icon('close', 'icon-sm')}</button>
       </div>
     `).join('');
     document.getElementById('urlCount').textContent = `${urls.length} URL eklendi`;
@@ -1087,7 +1242,7 @@
     document.getElementById('startBtn').disabled = true;
     document.getElementById('startSiteBtn').disabled = true;
     document.getElementById('cancelBtn').disabled = false;
-    document.getElementById('cancelBtn').textContent = '🛑 İptal Et';
+    document.getElementById('cancelBtn').innerHTML = `${icon('stop_circle', 'icon-sm')}İptal Et`;
     document.getElementById('statusDot').classList.add('running');
     document.getElementById('statusText').textContent = 'Çalışıyor...';
     document.getElementById('progressSection').classList.add('active');
@@ -1148,7 +1303,7 @@
     document.getElementById('startBtn').disabled = true;
     document.getElementById('startSiteBtn').disabled = true;
     document.getElementById('cancelBtn').disabled = false;
-    document.getElementById('cancelBtn').textContent = '🛑 İptal Et';
+    document.getElementById('cancelBtn').innerHTML = `${icon('stop_circle', 'icon-sm')}İptal Et`;
     document.getElementById('statusDot').classList.add('running');
     document.getElementById('statusText').textContent = 'Site taranıyor...';
     document.getElementById('progressSection').classList.add('active');
@@ -1260,7 +1415,7 @@
     const r = results[idx];
     currentActiveTabResult = r;
     if (!r || r.error) {
-      document.getElementById('resultsContent').innerHTML = `<div class="empty-state"><div class="empty-state-icon">❌</div><div class="empty-state-text">Audit hatası: ${r?.error || 'Bilinmeyen'}</div></div>`;
+      document.getElementById('resultsContent').innerHTML = `<div class="empty-state"><div class="empty-state-icon">${icon('error', 'icon-xl')}</div><div class="empty-state-text">Audit hatası: ${r?.error || 'Bilinmeyen'}</div></div>`;
       return;
     }
     
@@ -1274,31 +1429,31 @@
   function buildSiteAuditResults(sa) {
     if (!sa) return '';
     return `<div class="overview-grid">
-      ${overviewCard('SAYFALAR', '📄', sa.crawledCount || 0, 'Taranan Sayfa', 'grade-b')}
-      ${overviewCard('DERİNLİK', '📉', sa.maxDepthReached || 0, 'Maksimum Tıklama', 'grade-b')}
-      ${overviewCard('SITEMAP URL', '🗺️', sa.sitemapUrlCount || 0, 'Sitemap İçinde', 'grade-c')}
-      ${overviewCard('ORPHAN PAGES', '👻', (sa.orphans || []).length, 'Bağlantısız Sayfa', (sa.orphans||[]).length > 0 ? 'grade-d' : 'grade-a')}
-      ${overviewCard('BENZER İÇERİK', '👯', (sa.duplicates || []).length, 'Near-Duplicate', (sa.duplicates||[]).length > 0 ? 'grade-orange' : 'grade-green')}
-      ${overviewCard('KIRIK LİNKLER', '💔', sa.brokenLinks || 0, '404 / 500 Hata', sa.brokenLinks > 0 ? 'grade-d' : 'grade-a')}
+      ${overviewCard('SAYFALAR', 'description', sa.crawledCount || 0, 'Taranan Sayfa', 'grade-b')}
+      ${overviewCard('DERİNLİK', 'alt_route', sa.maxDepthReached || 0, 'Maksimum Tıklama', 'grade-b')}
+      ${overviewCard('SITEMAP URL', 'map', sa.sitemapUrlCount || 0, 'Sitemap İçinde', 'grade-c')}
+      ${overviewCard('ORPHAN PAGES', 'explore', (sa.orphans || []).length, 'Bağlantısız Sayfa', (sa.orphans||[]).length > 0 ? 'grade-d' : 'grade-a')}
+      ${overviewCard('BENZER İÇERİK', 'content_copy', (sa.duplicates || []).length, 'Near-Duplicate', (sa.duplicates||[]).length > 0 ? 'grade-c' : 'grade-a')}
+      ${overviewCard('KIRIK LİNKLER', 'heart_broken', sa.brokenLinks || 0, '404 / 500 Hata', sa.brokenLinks > 0 ? 'grade-d' : 'grade-a')}
     </div>
     
     <div class="detail-grid">
       <!-- Orphans Panel -->
       <div class="detail-panel">
-        <div class="panel-title">👻 Orphan Pages (Yetim Sayfalar)</div>
+        <div class="panel-title"><span class="icon-chip">${icon('explore')}</span>Orphan Pages (Yetim Sayfalar)</div>
         <p style="font-size:12px;color:var(--text-muted);margin-bottom:12px">Sitemap'te olup site içinden link verilmeyen sayfalar.</p>
         ${(sa.orphans || []).length === 0 
-          ? '<div class="badge badge-green">Sorun yok</div>' 
+          ? `<div class="badge badge-green">${icon('check_circle', 'icon-sm')}Sorun yok</div>` 
           : `<div class="log-feed" style="max-height:200px">` + sa.orphans.map(o => `<div>${o}</div>`).join('') + `</div>`
         }
       </div>
 
       <!-- Duplicates Panel -->
       <div class="detail-panel">
-        <div class="panel-title">👯 Near-Duplicate Analizi</div>
+        <div class="panel-title"><span class="icon-chip">${icon('content_copy')}</span>Near-Duplicate Analizi</div>
         <p style="font-size:12px;color:var(--text-muted);margin-bottom:12px">Benzer içerik / aynı title-desc kullanan sayfalar.</p>
         ${(sa.duplicates || []).length === 0 
-          ? '<div class="badge badge-green">Kopya içerik yok</div>' 
+          ? `<div class="badge badge-green">${icon('check_circle', 'icon-sm')}Kopya içerik yok</div>` 
           : `<div class="log-feed" style="max-height:200px">` + sa.duplicates.map(d => `<div style="margin-bottom:8px;border-bottom:1px solid var(--border);padding-bottom:8px">
               <b>Sim: ${d.similarity}%</b> ${d.exactMeta ? '(Aynı Meta)' : ''}<br>
               <a href="#" style="color:var(--accent-light)">${d.url1}</a><br>
@@ -1331,7 +1486,11 @@
     let clickableCls = detailsKey ? 'clickable-row' : '';
     let onclick = detailsKey ? `onclick="showDetails('${detailsKey}')"` : '';
     
-    if (typeof val === 'boolean') return val ? `<span class="badge badge-green">✓</span>` : `<span class="badge badge-red ${clickableCls}" ${onclick}>✕</span>`;
+    if (typeof val === 'boolean') {
+      return val
+        ? `<span class="badge badge-green">${icon('check_circle', 'icon-sm')}Uygun</span>`
+        : `<span class="badge badge-red ${clickableCls}" ${onclick}>${icon('cancel', 'icon-sm')}Sorun</span>`;
+    }
     
     let colorCls = 'badge-green';
     if (val > goodThreshold) colorCls = 'badge-yellow';
@@ -1417,8 +1576,8 @@
         html = emptyMessage();
       } else {
         html = renderTable(['Sorun', 'Görsel URL'], [
-          ...altList.map(u => [`❌ Alt Eksik`, u]),
-          ...dimList.map(u => [`📐 Boyut Eksik`, u])
+          ...altList.map(u => ['Alt Eksik', u]),
+          ...dimList.map(u => ['Boyut Eksik', u])
         ]);
       }
     } else if (type === 'links' || type === 'ariaLabels') {
@@ -1447,7 +1606,7 @@
 
   function emptyMessage() {
     return `<div class="empty-detail">
-      <div style="font-size:24px; margin-bottom:10px;">💾</div>
+      <div style="display:flex; justify-content:center; margin-bottom:10px;">${icon('inventory_2', 'icon-lg')}</div>
       <b>Eski Veri Tespit Edildi</b><br>
       Bu audit dosyası detaylı raporlama özelliği eklenmeden önce kaydedilmiştir.<br>
       Güncel detayları görmek için lütfen yeni bir tarama başlatın.
@@ -1481,21 +1640,21 @@
     const fe = r.frontend || {};
 
     return `<div class="overview-grid">
-      ${overviewCard('FRONTEND', '🎨', fe.globalGrade || '—', `${fe.globalScore || 0}/100`, gradeClass(fe.globalGrade))}
-      ${overviewCard('AI SEARCH', '🤖', ai.grade || '—', `${ai.overallPercentage || 0}/100`, gradeClass(ai.grade))}
-      ${overviewCard('TAM YÜKLEME', '⏱️', r.loadTime ? (r.loadTime / 1000).toFixed(2) + 's' : '—', 'Sayfa tam yükleme süresi', r.loadTime < 3000 ? 'grade-a' : r.loadTime < 6000 ? 'grade-c' : 'grade-d')}
-      ${overviewCard('IMAGES', '🖼️', imgs.totalImages || 0, `${imgs.imagesWithoutAlt || 0} alt eksik`, imgs.imagesWithoutAlt > 5 ? 'grade-d' : 'grade-a')}
-      ${overviewCard('LINKS', '🔗', (links.totalInternalLinks||0) + (links.totalExternalLinks||0), `${links.totalInternalLinks||0} iç / ${links.totalExternalLinks||0} dış`, 'grade-b')}
+      ${overviewCard('FRONTEND', 'design_services', fe.globalGrade || '—', `${fe.globalScore || 0}/100`, gradeClass(fe.globalGrade))}
+      ${overviewCard('AI SEARCH', 'smart_toy', ai.grade || '—', `${ai.overallPercentage || 0}/100`, gradeClass(ai.grade))}
+      ${overviewCard('TAM YÜKLEME', 'schedule', r.loadTime ? (r.loadTime / 1000).toFixed(2) + 's' : '—', 'Sayfa tam yükleme süresi', r.loadTime < 3000 ? 'grade-a' : r.loadTime < 6000 ? 'grade-c' : 'grade-d')}
+      ${overviewCard('IMAGES', 'image', imgs.totalImages || 0, `${imgs.imagesWithoutAlt || 0} alt eksik`, imgs.imagesWithoutAlt > 5 ? 'grade-d' : 'grade-a')}
+      ${overviewCard('LINKS', 'link', (links.totalInternalLinks||0) + (links.totalExternalLinks||0), `${links.totalInternalLinks||0} iç / ${links.totalExternalLinks||0} dış`, 'grade-b')}
     </div>`;
   }
 
-  function overviewCard(label, icon, value, sub, grade) {
+  function overviewCard(label, iconName, value, sub, grade) {
     let clickable = '';
     if (label === 'IMAGES' && parseInt(value) > 0) clickable = 'onclick="showDetails(\'images\')" style="cursor:pointer"';
     if (label === 'LINKS') clickable = 'onclick="showDetails(\'links\')" style="cursor:pointer"';
     
     return `<div class="score-card ${grade}" ${clickable}>
-      <div class="card-header"><span class="card-label">${label}</span><span class="card-icon">${icon}</span></div>
+      <div class="card-header"><div class="card-header-main"><span class="card-label">${label}</span></div><span class="card-icon">${icon(iconName, 'icon-lg')}</span></div>
       <div class="card-value">${value}</div>
       <div class="card-sub">${sub}</div>
     </div>`;
@@ -1525,8 +1684,8 @@
     const ssUrl = historyContext
       ? `/api/projects/${historyContext.pId}/history/${historyContext.hId}/screenshot/${resultIndex ?? 0}`
       : `/api/screenshot/${resultIndex ?? 0}`;
-    return `<div style="margin-bottom:20px;border-radius:12px;overflow:hidden;border:1px solid var(--border);background:var(--card-bg)">
-      <div style="padding:12px 16px;font-size:13px;font-weight:600;color:var(--text-muted);display:flex;align-items:center;gap:8px">📸 Sayfa Ekran Görüntüsü</div>
+    return `<div style="margin-bottom:20px;border-radius:12px;overflow:hidden;border:1px solid var(--border);background:linear-gradient(180deg, rgba(20, 27, 43, 0.94), rgba(13, 18, 30, 0.92));box-shadow:var(--shadow-soft)">
+      <div style="padding:12px 16px;font-size:13px;font-weight:600;color:var(--text-muted);display:flex;align-items:center;gap:8px">${icon('photo_camera', 'icon-sm')}Sayfa Ekran Görüntüsü</div>
       <div style="padding:0 8px 8px;text-align:center">
         <img src="${ssUrl}" alt="Page Screenshot" style="max-width:100%;border-radius:8px;cursor:pointer" onerror="this.parentElement.parentElement.style.display='none'" onclick="this.requestFullscreen?.()" />
       </div>
@@ -1537,14 +1696,14 @@
   function buildFrontendPanels(r) {
     const fe = r.frontend;
     if (!fe || fe.error) {
-      return `<div class="detail-panel"><div class="panel-title">🎨 Frontend Kalitesi</div><div style="font-size:13px;color:var(--text-muted);padding:16px 0">Frontend analizi mevcut değil${fe?.error ? ': ' + fe.error : ''}.</div></div>`;
+      return `<div class="detail-panel"><div class="panel-title"><span class="icon-chip">${icon('design_services')}</span>Frontend Kalitesi</div><div style="font-size:13px;color:var(--text-muted);padding:16px 0">Frontend analizi mevcut değil${fe?.error ? ': ' + fe.error : ''}.</div></div>`;
     }
 
     const cats = fe.categories || {};
     const gradeColor = g => ({'A':'var(--green)','B':'var(--cyan)','C':'var(--yellow)','D':'var(--orange)','E':'var(--red)','F':'var(--red)'}[g] || 'var(--text-muted)');
     const gradeBarClass = g => ({'A':'grade-a','B':'grade-b','C':'grade-c','D':'grade-d','E':'grade-f','F':'grade-f'}[g] || 'grade-f');
 
-    const fePanel = (title, icon, cat, pairs, options = {}) => {
+    const fePanel = (title, iconName, cat, pairs, options = {}) => {
       if (!cat) return '';
       const color = gradeColor(cat.grade);
       const barClass = gradeBarClass(cat.grade);
@@ -1556,7 +1715,7 @@
         return `<div class="stat-row"><span class="stat-label">${label}</span><span class="stat-value">${val}${suffix||''}</span></div>`;
       }).join('');
       return `<div class="detail-panel ${barClass}">
-        <div class="panel-title">${icon} ${title}
+        <div class="panel-title"><span class="icon-chip">${icon(iconName)}</span>${title}
           <span style="margin-left:auto;font-size:20px;font-weight:800;color:${color}">${cat.grade}</span>
           <span style="font-size:12px;color:var(--text-muted);font-weight:400;margin-left:6px">${cat.score}/100</span>
         </div>
@@ -1564,7 +1723,7 @@
       </div>`;
     };
 
-    const fePanelGrouped = (title, icon, cat, groups) => {
+    const fePanelGrouped = (title, iconName, cat, groups) => {
       if (!cat) return '';
       const color = gradeColor(cat.grade);
       const barClass = gradeBarClass(cat.grade);
@@ -1580,7 +1739,7 @@
         return `<div class="stat-group">${groupLabel}</div>${rows}`;
       }).join('');
       return `<div class="detail-panel ${barClass}">
-        <div class="panel-title">${icon} ${title}
+        <div class="panel-title"><span class="icon-chip">${icon(iconName)}</span>${title}
           <span style="margin-left:auto;font-size:20px;font-weight:800;color:${color}">${cat.grade}</span>
           <span style="font-size:12px;color:var(--text-muted);font-weight:400;margin-left:6px">${cat.score}/100</span>
         </div>
@@ -1589,43 +1748,43 @@
     };
 
     return [
-      fePanelGrouped('Page Weight', '⚖️', cats.pageWeight, [
+      fePanelGrouped('Page Weight', 'scale', cats.pageWeight, [
         ['Boyut Dağılımı', [['Toplam Ağırlık','totalKb',' KB'],['JS','jsKb',' KB'],['CSS','cssKb',' KB'],['Görsel','imageKb',' KB'],['Font','fontKb',' KB']]],
         ['Optimizasyon Sorunları', [['Büyük Görseller','oversizedImages',''],['Sıkıştırılmamış Kaynak','uncompressedKb',' KB']]],
       ]),
-      fePanelGrouped('Requests', '🔄', cats.requests, [
+      fePanelGrouped('Requests', 'sync', cats.requests, [
         ['İstek Sayıları', [['Toplam İstek','totalRequests',''],['Farklı Domain','domains',''],['3rd Party','thirdPartyDomains','']]],
         ['Sorunlu İstekler', [['404 Hata','notFound',''],['Boş İstek','emptyRequests','']]],
         ['Görsel Yükleme', [['Fold Altı Görsel','belowFoldImages',''],['Gizli Görsel','hiddenImages','']]],
       ]),
-      fePanelGrouped('DOM Complexity', '🌿', cats.domComplexity, [
+      fePanelGrouped('DOM Complexity', 'account_tree', cats.domComplexity, [
         ['Yapı', [['DOM Elementleri','totalElements',''],['Maks. Derinlik','maxDepth',''],['iframe Sayısı','iframes','']]],
         ['Sorunlar', [['Tekrarlanan ID','duplicatedIds','']]],
       ]),
-      fePanelGrouped('JS Complexity', '⚡', cats.jsComplexity, [
+      fePanelGrouped('JS Complexity', 'bolt', cats.jsComplexity, [
         ['Performans', [['JS Exec Süresi','execTimeMs',' ms'],['DOM Erişim Sayısı','domAccess','']]],
         ['Global Kirlilik', [['Scroll Listener','scrollListeners',''],['Global Değişken Sayısı','globalVariables','']]],
       ]),
-      fePanelGrouped('Bad JS', '🚨', cats.badJs, [
+      fePanelGrouped('Bad JS', 'warning', cats.badJs, [
         ['Hatalar', [['JS Hataları','jsErrors',''],['Console Uyarısı','consoleWarnings','']]],
         ['Anti-Pattern', [['document.write','documentWriteCalls',''],['Sync XHR','syncXmlHttpRequests','']]],
       ]),
-      fePanelGrouped('CSS Complexity', '🎨', cats.cssComplexity, [
+      fePanelGrouped('CSS Complexity', 'palette', cats.cssComplexity, [
         ['Yapı', [['Toplam Kural','totalRules',''],['Karmaşık Seçici','complexSelectors','']]],
         ['Renk Yönetimi', [['Renk Sayısı','uniqueColors',''],['Benzer Renkler','similarColors','']]],
         ['Responsive', [['Breakpoint Sayısı','breakpoints',''],['Mobile-First Dışı Sorgu','notMobileFirstQueries','']]],
       ]),
-      fePanelGrouped('Bad CSS', '🩹', cats.badCss, [
+      fePanelGrouped('Bad CSS', 'healing', cats.badCss, [
         ['Hatalar', [['Sözdizim Hatası','syntaxErrors',''],['@import Kullanımı','atImport','']]],
         ['Tekrarlar', [['Dup. Seçici','duplicatedSelectors',''],['Dup. Özellik','duplicatedProperties',''],['Boş Kural','emptyRules','']]],
         ['Anti-Pattern', [['!important Kullanımı','importantUsage',''],['Eski Prefix','oldPrefixes',''],['Gereksiz body Seçici','redundantBodySelectors','']]],
       ]),
-      fePanelGrouped('Server Config', '🖥️', cats.serverConfig, [
+      fePanelGrouped('Server Config', 'dns', cats.serverConfig, [
         ['Protokol', [['HTTP/1.1 Kaynak','http1Resources','']]],
         ['Cache Politikası', [['Cachesiz Kaynak','noCacheResources',''],['Cache Devre Dışı','cachingDisabled',''],['Cache Çok Kısa','cachingTooShort','']]],
         ['Bağlantı', [['Bağlantı Kapandı','connectionsClosed','']]],
       ]),
-      fePanelGrouped('Web Fonts', '🔤', cats.webFonts, [
+      fePanelGrouped('Web Fonts', 'font_download', cats.webFonts, [
         ['Kullanım', [['Font Sayısı','webfontCount',''],['Toplam Font KB','totalFontKb',' KB']]],
         ['Optimizasyon', [['WOFF2 Dışı Format','nonWoff2Count',''],['Büyük Font Dosyası','overweightFonts','']]],
       ]),
@@ -1635,7 +1794,7 @@
   function buildMetaPanel(r) {
     const m = r.meta || {};
     return `<div class="detail-panel">
-      <div class="panel-title">🏷️ Meta Etiketler</div>
+      <div class="panel-title"><span class="icon-chip">${icon('sell')}</span>Meta Etiketler</div>
 
       <div class="stat-group">Temel Meta</div>
       <div class="stat-row"><span class="stat-label">Title</span><span class="stat-value" style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${m.title || 'N/A'}</span></div>
@@ -1647,9 +1806,9 @@
       <div class="stat-row"><span class="stat-label">Sayfa Dili</span><span class="stat-value">${m.language || '—'}</span></div>
 
       <div class="stat-group">Sosyal Medya</div>
-      <div class="stat-row"><span class="stat-label">OG Title</span><span class="stat-value">${m.ogTitle ? '✅' : '❌'}</span></div>
-      <div class="stat-row"><span class="stat-label">OG Image</span><span class="stat-value">${m.ogImage ? '✅' : '❌'}</span></div>
-      <div class="stat-row"><span class="stat-label">Twitter Card</span><span class="stat-value">${m.twitterCard || '❌'}</span></div>
+      <div class="stat-row"><span class="stat-label">OG Title</span><span class="stat-value">${statusBadge(!!m.ogTitle, 'Var', 'Yok')}</span></div>
+      <div class="stat-row"><span class="stat-label">OG Image</span><span class="stat-value">${statusBadge(!!m.ogImage, 'Var', 'Yok')}</span></div>
+      <div class="stat-row"><span class="stat-label">Twitter Card</span><span class="stat-value">${m.twitterCard ? `<span class="tag">${m.twitterCard}</span>` : statusBadge(false, 'Var', 'Yok')}</span></div>
 
       <div class="stat-group">Crawl Yönergeleri</div>
       <div class="stat-row"><span class="stat-label">Robots</span><span class="stat-value"><span class="tag">${m.robots || '—'}</span></span></div>
@@ -1659,11 +1818,11 @@
   function buildSecurityPanel(r) {
     const s = r.security || {};
     return `<div class="detail-panel">
-      <div class="panel-title">🛡️ Güvenlik</div>
+      <div class="panel-title"><span class="icon-chip">${icon('shield')}</span>Güvenlik</div>
 
       <div class="stat-group">Bağlantı Güvenliği</div>
-      <div class="stat-row"><span class="stat-label">HTTPS</span><span class="stat-value">${s.isHttps ? '✅' : '❌'}</span></div>
-      <div class="stat-row"><span class="stat-label">HSTS (Zorunlu HTTPS)</span><span class="stat-value">${s.hsts ? '✅' : '❌'}</span></div>
+      <div class="stat-row"><span class="stat-label">HTTPS</span><span class="stat-value">${statusBadge(!!s.isHttps, 'Aktif', 'Pasif')}</span></div>
+      <div class="stat-row"><span class="stat-label">HSTS (Zorunlu HTTPS)</span><span class="stat-value">${statusBadge(!!s.hsts, 'Aktif', 'Pasif')}</span></div>
       <div class="stat-row"><span class="stat-label">Mixed Content (HTTP içerik)</span><span class="stat-value">${badge((s.mixedContent||[]).length, 0, 0, 'mixedContent')}</span></div>
 
       <div class="stat-group">Güvenlik Başlıkları</div>
@@ -1694,10 +1853,10 @@
     const foundSchemas = schema.targetSchemas ? Object.entries(schema.targetSchemas).filter(([,v])=>v.found).map(([k])=>k) : [];
 
     return `<div class="detail-panel">
-      <div class="panel-title">🤖 AI Search Readiness</div>
+      <div class="panel-title"><span class="icon-chip">${icon('smart_toy')}</span>AI Search Readiness</div>
       <div class="ai-grade ${gc}">${ai.grade || '—'}</div>
       <div style="text-align:center;margin-bottom:20px;font-size:13px;color:var(--text-muted)">${ai.overallPercentage || 0} / 100 puan</div>
-      <div class="stat-row"><span class="stat-label">llms.txt</span><span class="stat-value">${llms['llms.txt']?.exists ? '✅ Mevcut' : '❌ Yok'}</span></div>
+      <div class="stat-row"><span class="stat-label">llms.txt</span><span class="stat-value">${statusBadge(!!llms['llms.txt']?.exists, 'Mevcut', 'Yok')}</span></div>
 
       <div style="margin:16px 0">
         <div style="font-size:12px;color:var(--text-muted);margin-bottom:6px">Alıntılanabilirlik (${cite.score||0}/${cite.maxScore||5})</div>
@@ -1724,7 +1883,7 @@
     const headings = c.headingOrder || [];
     const h1s = c.h1 || [];
     return `<div class="detail-panel">
-      <div class="panel-title">📄 İçerik Analizi</div>
+      <div class="panel-title"><span class="icon-chip">${icon('article')}</span>İçerik Analizi</div>
 
       <div class="stat-group">Başlık Yapısı</div>
       <div class="stat-row"><span class="stat-label">H1 Sayısı</span><span class="stat-value">${badge(h1s.length, 1, 2)}</span></div>
@@ -1746,7 +1905,7 @@
     const p = r.performance || {};
     const rendering = r.rendering || {};
     return `<div class="detail-panel">
-      <div class="panel-title">⚡ Performans</div>
+      <div class="panel-title"><span class="icon-chip">${icon('bolt')}</span>Performans</div>
 
       <div class="stat-group">Core Web Vitals</div>
       <div class="stat-row"><span class="stat-label">LCP — Largest Contentful Paint</span><span class="stat-value">${p.lcp ? Math.round(p.lcp)+'ms' : '—'}</span></div>
@@ -1764,14 +1923,14 @@
       <div class="stat-row"><span class="stat-label">Kullanılmayan JS</span><span class="stat-value">${badge(p.unusedJsPercent || 0, 20, 50, 'unusedJs')}%</span></div>
 
       <div class="stat-group">Rendering</div>
-      <div class="stat-row"><span class="stat-label">SSR/CSR Benzerliği</span><span class="stat-value">${rendering.similarityScore != null ? rendering.similarityScore+'%' : '—'} ${rendering.renderDifference ? '⚠️' : '✅'}</span></div>
+      <div class="stat-row"><span class="stat-label">SSR/CSR Benzerliği</span><span class="stat-value">${rendering.similarityScore != null ? rendering.similarityScore+'%' : '—'} ${rendering.renderDifference ? statusBadge(false, 'Uygun', 'Fark Var') : statusBadge(true, 'Uygun', 'Fark Var')}</span></div>
     </div>`;
   }
 
   function buildLinksPanel(r) {
     const l = r.links || {};
     return `<div class="detail-panel">
-      <div class="panel-title">🔗 Link Analizi</div>
+      <div class="panel-title"><span class="icon-chip">${icon('link')}</span>Link Analizi</div>
 
       <div class="stat-group">Bağlantı Durumu</div>
       <div class="stat-row"><span class="stat-label">İç / Dış Linkler</span><span class="stat-value">${l.totalInternalLinks||0} / ${l.totalExternalLinks||0}</span></div>
@@ -1781,7 +1940,7 @@
 
       <div class="stat-group">SEO Sinyalleri</div>
       <div class="stat-row"><span class="stat-label">Pagination (Next/Prev)</span><span class="stat-value"><span class="tag">${l.relNext?'Var':'Yok'}</span> <span class="tag">${l.relPrev?'Var':'Yok'}</span></span></div>
-      <div class="stat-row"><span class="stat-label">Infinite Scroll Verisi</span><span class="stat-value">${l.hasInfiniteScroll ? '✅ Tespit Edildi' : '❌ Yok'}</span></div>
+      <div class="stat-row"><span class="stat-label">Infinite Scroll Verisi</span><span class="stat-value">${statusBadge(!!l.hasInfiniteScroll, 'Tespit Edildi', 'Yok')}</span></div>
       <div class="stat-row"><span class="stat-label">Hreflang</span><span class="stat-value">${(l.hreflangTags||[]).length > 0 ? (l.hreflangTags||[]).map(t=>`<span class="tag">${t.lang}</span>`).join('') : '—'}</span></div>
 
       <div class="stat-group">Erişilebilirlik</div>
@@ -1794,7 +1953,7 @@
     const m = r.mobile || {};
     const imgs = r.images || {};
     return `<div class="detail-panel">
-      <div class="panel-title">📱 Mobil & Görsel</div>
+      <div class="panel-title"><span class="icon-chip">${icon('devices')}</span>Mobil & Görsel</div>
 
       <div class="stat-group">Mobil Uyumluluk</div>
       <div class="stat-row"><span class="stat-label">Viewport Taşması</span><span class="stat-value">${badge(!m.viewportOverflow)}</span></div>
@@ -1888,7 +2047,7 @@
       loading.style.display = 'none';
       if (data.error) {
         reportBox.innerHTML = `<div style="color:var(--red); padding:20px; border:1px solid var(--red); border-radius:8px;">
-          <h3>⚠️ Hata</h3>
+          <h3 style="display:flex; align-items:center; gap:8px;">${icon('warning', 'icon-sm')}Hata</h3>
           <p>${data.error}</p>
         </div>`;
       } else {
@@ -1964,25 +2123,25 @@
   <div class="ai-modal-content">
     <div class="ai-modal-header">
       <div style="display:flex; align-items:center; gap: 14px;">
-        <div style="font-size:32px;">✨</div>
+        <span class="icon-chip"><span class="icon">auto_awesome</span></span>
         <div>
           <h2>Yapay Zeka Teknik Denetim Raporu</h2>
           <p>Gemini 2.5 Flash tarafından oluşturuldu</p>
         </div>
       </div>
       <div style="display:flex; align-items:center; gap:12px;">
-        <button class="btn btn-primary adhoc-pdf-btn" style="display:none; padding: 8px 16px; font-size: 13px;" onclick="downloadAdhocAiPdf()">📄 PDF İndir</button>
-        <button class="ai-modal-close" onclick="closeAdhocAiModal()">✕</button>
+        <button class="btn btn-primary adhoc-pdf-btn" style="display:none; padding: 8px 16px; font-size: 13px;" onclick="downloadAdhocAiPdf()"><span class="icon icon-sm">description</span>PDF İndir</button>
+        <button class="ai-modal-close" onclick="closeAdhocAiModal()"><span class="icon icon-sm">close</span></button>
       </div>
     </div>
     <div id="adhocAiLoading" style="display:none; text-align:center; padding: 48px 20px;">
-      <div style="font-size:48px; animation: aiPulse 1.5s infinite;">🤖</div>
+      <div style="display:flex; justify-content:center; animation: aiPulse 1.5s infinite;"><span class="icon icon-xl">smart_toy</span></div>
       <p style="margin-top:20px; font-size:15px;">Audit verileri Gemini'ye gönderildi...</p>
       <p style="font-size:13px;">Kapsamlı teknik analiz raporu hazırlanıyor. Bu işlem 15-30 saniye sürebilir.</p>
     </div>
     <div id="adhocAiReportBox" class="ai-report"></div>
     <div class="adhoc-pdf-btn" style="display:none; margin-top:32px; padding-top:24px; border-top:1px solid #e2e8f0; text-align:right;">
-      <button class="btn btn-primary" onclick="downloadAdhocAiPdf()">📄 PDF Olarak İndir</button>
+      <button class="btn btn-primary" onclick="downloadAdhocAiPdf()"><span class="icon icon-sm">description</span>PDF Olarak İndir</button>
     </div>
   </div>
 </div>

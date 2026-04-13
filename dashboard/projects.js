@@ -2,6 +2,10 @@ let projects = [];
 let activeProjectId = null;
 let historyList = [];
 
+function icon(name, cls = '') {
+  return `<span class="icon ${cls}" aria-hidden="true">${name}</span>`;
+}
+
 // Navigation Views
 function showView(id) {
   document.getElementById('view-list').style.display = 'none';
@@ -24,13 +28,21 @@ async function loadProjects() {
     
     const grid = document.getElementById('projectsGrid');
     if (projects.length === 0) {
-      grid.innerHTML = '<p style="color:var(--text-muted)">Henüz proje yok.</p>';
+      grid.innerHTML = `<div class="surface-panel" style="text-align:center; color:var(--text-muted); padding:48px 24px;"><div style="display:flex; justify-content:center; margin-bottom:12px;">${icon('inventory_2', 'icon-xl')}</div><p>Henüz proje yok.</p></div>`;
     } else {
       grid.innerHTML = projects.map(p => `
         <div class="card" onclick="openProject('${p.id}')">
-          <h3>${p.name}</h3>
-          <p>${(p.urls||[]).length} URL yönetiliyor</p>
-          <p style="font-size:11px; opacity:0.6;">Son Güncelleme: ${new Date(p.updatedAt).toLocaleDateString()}</p>
+          <div class="card-head">
+            <div>
+              <h3>${p.name}</h3>
+              <p>${(p.urls||[]).length} URL yönetiliyor</p>
+            </div>
+            <span class="icon-chip">${icon('folder_open')}</span>
+          </div>
+          <div class="card-meta">
+            <span class="pill">${icon('link', 'icon-sm')}${(p.urls||[]).length} URL</span>
+            <span class="pill">${icon('schedule', 'icon-sm')}Son Güncelleme: ${new Date(p.updatedAt).toLocaleDateString()}</span>
+          </div>
         </div>
       `).join('');
     }
@@ -78,7 +90,7 @@ async function deleteActiveProject() {
 // History & Delta
 async function loadHistory(id) {
   const tbody = document.getElementById('historyBody');
-  tbody.innerHTML = '<tr><td colspan="3">Yükleniyor...</td></tr>';
+  tbody.innerHTML = '<tr><td colspan="3" style="color:var(--text-muted)">Yükleniyor...</td></tr>';
   document.getElementById('deltaResults').innerHTML = '';
   
   try {
@@ -86,7 +98,7 @@ async function loadHistory(id) {
     historyList = await res.json();
     
     if(historyList.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="4">Hiç geçmiş tarama yok.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="4" style="color:var(--text-muted)">Hiç geçmiş tarama yok.</td></tr>';
     } else {
       tbody.innerHTML = historyList.map(h => `
         <tr>
@@ -94,10 +106,10 @@ async function loadHistory(id) {
           <td>${new Date(h.timestamp).toLocaleString()}</td>
           <td>${h.totalUrls} Sayfa</td>
           <td>
-            <div style="display:flex; gap:8px;">
-              <button class="btn btn-primary" style="padding: 4px 10px; font-size: 11px;" title="Görüntüle" onclick="viewHistory('${activeProjectId}', '${h.id}')">👁️</button>
-              <button class="btn btn-outline" style="padding: 4px 10px; font-size: 11px;" title="AI Analiz" onclick="openAiInsight('${h.id}')">🤖 AI</button>
-              <button class="btn btn-outline" style="padding: 4px 10px; font-size: 11px; border-color:var(--accent); color:var(--accent);" title="JSON İndir" onclick="downloadHistoryJson('${activeProjectId}', '${h.id}', '${h.timestamp}')">📥 JSON</button>
+            <div class="action-buttons">
+              <button class="btn btn-primary btn-icon-only" style="font-size: 11px;" title="Görüntüle" onclick="viewHistory('${activeProjectId}', '${h.id}')">${icon('visibility', 'icon-sm')}</button>
+              <button class="btn btn-outline" style="padding: 8px 12px; font-size: 11px;" title="AI Analiz" onclick="openAiInsight('${h.id}')">${icon('auto_awesome', 'icon-sm')}AI</button>
+              <button class="btn btn-outline" style="padding: 8px 12px; font-size: 11px; border-color:var(--accent); color:var(--accent);" title="JSON İndir" onclick="downloadHistoryJson('${activeProjectId}', '${h.id}', '${h.timestamp}')">${icon('download', 'icon-sm')}JSON</button>
             </div>
           </td>
         </tr>
@@ -157,7 +169,7 @@ async function compareSelected() {
     const changed = deltas.filter(d => d.status !== 'unchanged');
     
     if(changed.length === 0) {
-      container.innerHTML = '<div class="delta-item improvement">✅ Seçilen iki tarama arasında sıfır fark var. Her şey aynı.</div>';
+      container.innerHTML = `<div class="delta-item improvement"><div style="display:flex; align-items:center; gap:10px;">${icon('check_circle', 'icon-sm')}Seçilen iki tarama arasında sıfır fark var. Her şey aynı.</div></div>`;
       return;
     }
     
@@ -182,7 +194,7 @@ async function compareSelected() {
 
       return `
         <div class="delta-item ${cls}">
-          <b>${d.url}</b>
+          <div class="section-head" style="margin-bottom:8px;"><b>${d.url}</b><span class="pill">${icon(cls === 'critical' ? 'warning' : cls === 'warning' ? 'error' : 'trending_up', 'icon-sm')}${d.status}</span></div>
           <div style="margin-top:8px;">${changesHtml}</div>
         </div>
       `;
@@ -264,7 +276,7 @@ async function openAiInsight(runId) {
     loading.style.display = 'none';
     if (data.error) {
       reportBox.innerHTML = `<div style="color:var(--red); padding:20px; border:1px solid var(--red); border-radius:8px;">
-        <h3>⚠️ Hata</h3>
+        <h3 style="display:flex; align-items:center; gap:8px;">${icon('warning', 'icon-sm')}Hata</h3>
         <p>${data.error}</p>
       </div>`;
     } else {

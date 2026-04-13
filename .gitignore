@@ -20,3 +20,10 @@ redirect-report.*
 scratch.js
 src/debug.js
 src/debug_cls.js
+
+# Playwright
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+/playwright/.auth/

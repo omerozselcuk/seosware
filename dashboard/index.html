@@ -116,8 +116,8 @@
     .details-content {
       background: var(--bg-secondary);
       border: 1px solid var(--border);
-      width: 90%; max-width: 800px;
-      max-height: 80vh;
+      width: 92%; max-width: 960px;
+      max-height: 85vh;
       border-radius: var(--radius);
       padding: 32px;
       overflow-y: auto;
@@ -1055,7 +1055,313 @@
       50% { transform: scale(1.15); opacity: 1; }
       100% { transform: scale(1); opacity: 0.8; }
     }
-</style>
+
+    /* ─── Frontend Drill-Down Drawers ─── */
+    .fe-panel {
+      cursor: default;
+    }
+    .fe-toggle-btn {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      width: 100%;
+      margin-top: 14px;
+      padding: 9px 14px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--text-secondary);
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      text-align: left;
+      letter-spacing: 0.3px;
+    }
+    .fe-toggle-btn:hover {
+      background: rgba(0, 246, 255, 0.07);
+      border-color: var(--border-hover);
+      color: var(--accent-light);
+    }
+    .fe-toggle-btn .fe-toggle-icon {
+      margin-left: auto;
+      transition: transform 0.25s ease;
+      font-size: 18px;
+      font-family: 'Material Symbols Rounded';
+      font-variation-settings: 'FILL' 1,'wght' 600,'GRAD' 0,'opsz' 24;
+    }
+    .fe-toggle-btn.open .fe-toggle-icon { transform: rotate(180deg); }
+
+    .fe-detail-drawer {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.35s ease;
+    }
+    .fe-detail-drawer.open { max-height: 9999px; }
+
+    .fe-drawer-inner {
+      padding-top: 14px;
+    }
+
+    .fe-section-title {
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 1.2px;
+      padding: 10px 0 6px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 6px;
+    }
+
+    .fe-file-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 7px 8px;
+      border-radius: 8px;
+      font-size: 12px;
+      transition: background 0.15s;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+    }
+    .fe-file-row:hover { background: rgba(255,255,255,0.04); }
+    .fe-file-url {
+      flex: 1;
+      color: var(--accent-light);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-family: 'Courier New', monospace;
+      font-size: 11px;
+      text-decoration: none;
+    }
+    .fe-file-url:hover { text-decoration: underline; }
+    .fe-file-size {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-secondary);
+      white-space: nowrap;
+      min-width: 52px;
+      text-align: right;
+    }
+    .fe-file-size.size-bad { color: var(--red); }
+    .fe-file-size.size-warn { color: var(--yellow); }
+    .fe-file-size.size-ok { color: var(--green); }
+
+    .fe-type-badge {
+      display: inline-block;
+      padding: 2px 7px;
+      border-radius: 999px;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      min-width: 36px;
+      text-align: center;
+    }
+    .fe-badge-js    { background: rgba(251,191,36,0.15);  color: #fbbf24; }
+    .fe-badge-css   { background: rgba(52,211,153,0.15);  color: #34d399; }
+    .fe-badge-image { background: rgba(96,165,250,0.15);  color: #60a5fa; }
+    .fe-badge-font  { background: rgba(167,139,250,0.15); color: #a78bfa; }
+    .fe-badge-other { background: rgba(148,163,184,0.15); color: #94a3b8; }
+
+    .offender-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      padding: 8px 10px;
+      border-radius: 8px;
+      font-size: 12px;
+      border-left: 2px solid var(--red);
+      background: rgba(232,63,87,0.05);
+      margin-bottom: 5px;
+      word-break: break-all;
+    }
+    .offender-row.warn { border-color: var(--yellow); background: rgba(251,191,36,0.05); }
+    .offender-row.info { border-color: var(--cyan); background: rgba(0,246,255,0.05); }
+    .offender-msg { color: var(--text-secondary); flex: 1; line-height: 1.5; }
+    .offender-url {
+      color: var(--accent-light);
+      font-family: 'Courier New', monospace;
+      font-size: 11px;
+      word-break: break-all;
+    }
+
+    /* Donut chart */
+    .fe-donut-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      padding: 14px 0 8px;
+    }
+    .fe-donut-canvas { display: block; }
+    .fe-donut-legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px 16px;
+      justify-content: center;
+    }
+    .fe-legend-item {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 11px;
+      color: var(--text-secondary);
+    }
+    .fe-legend-dot {
+      width: 9px; height: 9px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .fe-empty {
+      padding: 14px;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 12px;
+      font-style: italic;
+    }
+    .fe-count-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(232,63,87,0.15);
+      color: var(--red);
+      border-radius: 999px;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 1px 7px;
+      margin-left: 6px;
+    }
+    .fe-count-badge.ok { background: rgba(0,246,255,0.1); color: var(--green); }
+
+    /* ── Score Breakdown Table ─────────────────────────────────── */
+    .fe-breakdown {
+      margin-bottom: 20px;
+    }
+    .fe-breakdown-title {
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--accent-light);
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      padding: 12px 0 10px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 2px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .fe-breakdown-row {
+      display: grid;
+      grid-template-columns: minmax(140px, 1.2fr) 80px 1fr 60px;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 8px;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+      font-size: 12px;
+      transition: background 0.15s;
+    }
+    .fe-breakdown-row:hover {
+      background: rgba(255,255,255,0.03);
+    }
+    .fe-breakdown-row:last-child {
+      border-bottom: none;
+    }
+    .fe-breakdown-label {
+      color: var(--text-secondary);
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .fe-breakdown-label .fe-bd-icon {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .fe-breakdown-value {
+      font-weight: 700;
+      color: var(--text-primary);
+      text-align: right;
+      font-family: 'Inter', monospace;
+    }
+    .fe-breakdown-bar-wrap {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .fe-breakdown-bar-track {
+      flex: 1;
+      height: 7px;
+      background: rgba(255,255,255,0.06);
+      border-radius: 4px;
+      overflow: hidden;
+      position: relative;
+    }
+    .fe-breakdown-bar-fill {
+      height: 100%;
+      border-radius: 4px;
+      transition: width 0.8s cubic-bezier(0.4,0,0.2,1);
+      min-width: 0;
+    }
+    .fe-breakdown-score {
+      font-weight: 800;
+      font-size: 13px;
+      text-align: right;
+      min-width: 40px;
+    }
+    .fe-breakdown-threshold {
+      font-size: 10px;
+      color: var(--text-muted);
+      display: flex;
+      gap: 8px;
+      padding: 2px 8px 0;
+    }
+    .fe-breakdown-header {
+      display: grid;
+      grid-template-columns: minmax(140px, 1.2fr) 80px 1fr 60px;
+      gap: 12px;
+      padding: 8px 8px 6px;
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      border-bottom: 1px solid var(--border);
+    }
+    .fe-breakdown-weight {
+      font-size: 9px;
+      padding: 1px 5px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.07);
+      color: var(--text-muted);
+      font-weight: 600;
+      margin-left: 4px;
+    }
+    .fe-breakdown-summary {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 14px;
+      margin-top: 8px;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+    }
+    .fe-breakdown-summary-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-secondary);
+    }
+    .fe-breakdown-summary-score {
+      font-size: 18px;
+      font-weight: 800;
+    }
+  </style>
+
 </head>
 <body>
 
@@ -1693,6 +1999,177 @@
   }
 
   // ─── FRONTEND QUALITY PANELS (one card per category) ───
+  // ─── FRONTEND QUALITY PANELS — with expandable detail drawers ───
+  // fe detail popup — stores pending content keyed by button id
+  const _feDetailStore = {};
+  let _fePanelCounter = 0;
+
+  function showFeDetails(panelId) {
+    const entry = _feDetailStore[panelId];
+    if (!entry) return;
+    const modal = document.getElementById('detailsModal');
+    const title = document.getElementById('detailsTitle');
+    const sub   = document.getElementById('detailsSub');
+    const container = document.getElementById('detailsTableContainer');
+    title.innerText = entry.title;
+    if (sub) sub.innerText = entry.sub || '';
+
+    // Build score breakdown HTML
+    let breakdownHtml = '';
+    if (entry.scoreBreakdown && entry.scoreBreakdown.length > 0) {
+      const sbScoreColor = (s) => s >= 80 ? 'var(--green)' : s >= 50 ? 'var(--yellow)' : 'var(--red)';
+      const sbBarColor = (s) => s >= 80 ? 'linear-gradient(90deg, #00F6FF, #10b981)' : s >= 50 ? 'linear-gradient(90deg, #fbbf24, #f59e0b)' : 'linear-gradient(90deg, #E83F57, #dc2626)';
+
+      const rows = entry.scoreBreakdown.map(item => {
+        const scoreColor = sbScoreColor(item.score);
+        const barColor = sbBarColor(item.score);
+        const valStr = (item.value ?? 0) + (item.suffix || '');
+        const weightBadge = item.weight > 1 ? `<span class="fe-breakdown-weight">×${item.weight}</span>` : '';
+        return `
+          <div class="fe-breakdown-row">
+            <div class="fe-breakdown-label">
+              <span class="fe-bd-icon" style="background:${scoreColor}"></span>
+              ${item.label}${weightBadge}
+            </div>
+            <div class="fe-breakdown-value">${valStr}</div>
+            <div class="fe-breakdown-bar-wrap">
+              <div class="fe-breakdown-bar-track">
+                <div class="fe-breakdown-bar-fill" style="width:${item.score}%;background:${barColor}"></div>
+              </div>
+            </div>
+            <div class="fe-breakdown-score" style="color:${scoreColor}">${item.score}</div>
+          </div>
+          <div class="fe-breakdown-threshold">
+            <span>✓ İyi: ≤${item.good}${item.suffix||''}</span>
+            <span>✗ Kötü: ≥${item.bad}${item.suffix||''}</span>
+          </div>`;
+      }).join('');
+
+      // Calculate weighted average for summary
+      const totalWeight = entry.scoreBreakdown.reduce((s, i) => s + (i.weight || 1), 0);
+      const weightedSum = entry.scoreBreakdown.reduce((s, i) => s + i.score * (i.weight || 1), 0);
+      const avgScore = Math.round(weightedSum / totalWeight);
+      const avgColor = sbScoreColor(avgScore);
+
+      breakdownHtml = `
+        <div class="fe-breakdown">
+          <div class="fe-breakdown-title">
+            <span class="icon icon-sm" style="font-size:14px">analytics</span>
+            Puan Kırılımı — Her Faktörün Etkisi
+          </div>
+          <div class="fe-breakdown-header">
+            <span>Faktör</span>
+            <span style="text-align:right">Değer</span>
+            <span>Skor Çubuğu</span>
+            <span style="text-align:right">Puan</span>
+          </div>
+          ${rows}
+          <div class="fe-breakdown-summary">
+            <span class="fe-breakdown-summary-label">Kategori Puanı (ağırlıklı ortalama)</span>
+            <span class="fe-breakdown-summary-score" style="color:${avgColor}">${avgScore}<span style="font-size:12px;font-weight:400;color:var(--text-muted)"> /100</span></span>
+          </div>
+        </div>`;
+    }
+
+    container.innerHTML = breakdownHtml + entry.html;
+    modal.classList.add('active');
+    // Draw donut chart if present (canvas must be in DOM now)
+    const canvas = container.querySelector('canvas[data-donut]');
+    if (canvas && !canvas.dataset.drawn) {
+      canvas.dataset.drawn = '1';
+      _drawFeDonut(canvas);
+    }
+
+    // Animate the bars after a short delay for visual effect
+    requestAnimationFrame(() => {
+      container.querySelectorAll('.fe-breakdown-bar-fill').forEach(bar => {
+        const w = bar.style.width;
+        bar.style.width = '0%';
+        requestAnimationFrame(() => { bar.style.width = w; });
+      });
+    });
+  }
+
+  function _drawFeDonut(canvas) {
+    const data = JSON.parse(canvas.dataset.donut);
+    const ctx = canvas.getContext('2d');
+    const W = canvas.width, H = canvas.height;
+    const cx = W / 2, cy = H / 2, R = Math.min(W, H) / 2 - 6, r = R * 0.58;
+    const total = data.reduce((s, d) => s + d.value, 0);
+    if (total === 0) return;
+    let angle = -Math.PI / 2;
+    data.forEach(seg => {
+      if (seg.value <= 0) return;
+      const sweep = (seg.value / total) * Math.PI * 2;
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.arc(cx, cy, R, angle, angle + sweep);
+      ctx.closePath();
+      ctx.fillStyle = seg.color;
+      ctx.fill();
+      angle += sweep;
+    });
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.fillStyle = '#0f172a';
+    ctx.fill();
+    ctx.fillStyle = '#f8fafc';
+    ctx.font = '700 13px Inter, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(total + ' KB', cx, cy);
+  }
+
+  function feFileList(items, typeBadge) {
+    if (!items || items.length === 0) return `<div class="fe-empty">Veri yok</div>`;
+    return items.map(r => {
+      const kb = r.sizeKb || 0;
+      const sizeClass = kb > 500 ? 'size-bad' : kb > 100 ? 'size-warn' : 'size-ok';
+      const shortUrl = (() => { try { const u = new URL(r.url); return u.hostname.replace('www.','') + u.pathname.slice(0,50) + (u.pathname.length > 50 ? '…' : ''); } catch { return r.url.slice(0,70); } })();
+      return `<div class="fe-file-row">
+        ${typeBadge ? `<span class="fe-type-badge fe-badge-${typeBadge}">${typeBadge}</span>` : ''}
+        <a class="fe-file-url" href="${r.url}" target="_blank" title="${r.url}">${shortUrl}</a>
+        <span class="fe-file-size ${sizeClass}">${kb} KB</span>
+      </div>`;
+    }).join('');
+  }
+
+  function feOffenderList(items) {
+    if (!items || items.length === 0) return `<div class="fe-empty">Sorun tespit edilmedi ✓</div>`;
+    return items.map(item => {
+      if (item.type === 'js-error') return `<div class="offender-row"><span class="offender-msg">${escHtml(item.message)}</span></div>`;
+      if (item.type === 'doc-write') return `<div class="offender-row warn"><span class="offender-msg">document.write() kullanımı tespit edildi (${item.count} kez)</span></div>`;
+      if (item.type === 'sync-xhr') return `<div class="offender-row warn"><span class="offender-msg">Senkron XHR kullanımı tespit edildi (${item.count} kez)</span></div>`;
+      if (item.type === 'duplicate-id') return `<div class="offender-row warn"><span class="offender-msg">Tekrarlanan ID: <code>#${escHtml(item.id)}</code> (${item.count} kez)</span></div>`;
+      if (item.type === 'heavy-node') return `<div class="offender-row info"><span class="offender-msg">&lt;${item.tag}&gt; — ${item.children} child element${item.cls ? ` .${item.cls}` : ''}</span></div>`;
+      if (item.type === 'global-var') return `<div class="offender-row info"><span class="offender-msg">Global değişken: <code>${escHtml(item.name)}</code></span></div>`;
+      if (item.type === 'complex-selector') return `<div class="offender-row warn"><span class="offender-msg"><code>${escHtml(item.selector)}</code></span></div>`;
+      if (item.type === 'similar-colors') return `<div class="offender-row info"><span class="offender-msg">Benzer renkler: <span style="display:inline-block;width:10px;height:10px;background:${item.a};border-radius:50%;vertical-align:middle"></span> ${item.a} ↔ <span style="display:inline-block;width:10px;height:10px;background:${item.b};border-radius:50%;vertical-align:middle"></span> ${item.b}</span></div>`;
+      if (item.type === 'css-import') return `<div class="offender-row warn"><span class="offender-msg">@import: <span class="offender-url">${escHtml(item.url)}</span></span></div>`;
+      if (item.type === 'duplicate-selector') return `<div class="offender-row warn"><span class="offender-msg">Tekrarlanan seçici: <code>${escHtml(item.selector)}</code></span></div>`;
+      if (item.type === 'old-prefix') return `<div class="offender-row warn"><span class="offender-msg">${escHtml(item.text)}</span></div>`;
+      if (item.type === '404') return `<div class="offender-row"><span class="offender-msg">404 Not Found: <a class="offender-url" href="${item.url}" target="_blank">${escHtml(item.url)}</a></span></div>`;
+      if (item.type === 'empty-request') return `<div class="offender-row warn"><span class="offender-msg">Boş yanıt (${item.status||'?'}): <span class="offender-url">${escHtml(item.url)}</span></span></div>`;
+      if (item.type === 'identical-content') return `<div class="offender-row warn"><span class="offender-msg">Aynı içerik (${item.urls?.length||0} URL): <span class="offender-url">${escHtml((item.urls||[])[0]||'')}</span></span></div>`;
+      if (item.type === 'below-fold-image') return `<div class="offender-row info"><span class="offender-msg">Lazy load eksik (fold altı): <span class="offender-url">${escHtml(item.url)}</span></span></div>`;
+      if (item.type === 'hidden-image') return `<div class="offender-row info"><span class="offender-msg">Gizli görsel isteniyor: <span class="offender-url">${escHtml(item.url)}</span></span></div>`;
+      if (item.type === 'http1') return `<div class="offender-row warn"><span class="offender-msg">HTTP/1.1: <span class="offender-url">${escHtml(item.url)}</span> <span style="color:var(--text-muted)">(${item.protocol})</span></span></div>`;
+      if (item.type === 'no-cache') return `<div class="offender-row warn"><span class="offender-msg">Cache header yok: <span class="offender-url">${escHtml(item.url)}</span></span></div>`;
+      if (item.type === 'caching-disabled') return `<div class="offender-row"><span class="offender-msg">Cache devre dışı (no-cache/no-store): <span class="offender-url">${escHtml(item.url)}</span></span></div>`;
+      if (item.type === 'caching-too-short') return `<div class="offender-row info"><span class="offender-msg">Cache çok kısa (max-age=${item.maxAge}s): <span class="offender-url">${escHtml(item.url)}</span></span></div>`;
+      if (item.type === 'non-woff2-font') return `<div class="offender-row warn"><span class="offender-msg">WOFF2 değil: <span class="offender-url">${escHtml(item.url)}</span> <span style="color:var(--text-muted)">${item.sizeKb||0} KB</span></span></div>`;
+      if (item.type === 'overweight-font') return `<div class="offender-row"><span class="offender-msg">Büyük font dosyası: <span class="offender-url">${escHtml(item.url)}</span> <span style="color:var(--red)">${item.sizeKb||0} KB</span></span></div>`;
+      if (item.type === 'oversized-image') return `<div class="offender-row warn"><span class="offender-msg">Büyük görsel (${item.naturalWidth}px → ${item.displayWidth}px display): <span class="offender-url">${escHtml(item.url)}</span> <span style="color:var(--yellow)">${item.sizeKb||0} KB</span></span></div>`;
+      if (item.type === 'uncompressed-js' || item.type === 'uncompressed-css') return `<div class="offender-row warn"><span class="offender-msg">Sıkıştırılmamış: <span class="offender-url">${escHtml(item.url)}</span> <span style="color:var(--yellow)">${item.sizeKb||0} KB</span></span></div>`;
+      return '';
+    }).filter(Boolean).join('');
+  }
+
+  function escHtml(s) {
+    if (!s) return '';
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
   function buildFrontendPanels(r) {
     const fe = r.frontend;
     if (!fe || fe.error) {
@@ -1703,92 +2180,236 @@
     const gradeColor = g => ({'A':'var(--green)','B':'var(--cyan)','C':'var(--yellow)','D':'var(--orange)','E':'var(--red)','F':'var(--red)'}[g] || 'var(--text-muted)');
     const gradeBarClass = g => ({'A':'grade-a','B':'grade-b','C':'grade-c','D':'grade-d','E':'grade-f','F':'grade-f'}[g] || 'grade-f');
 
-    const fePanel = (title, iconName, cat, pairs, options = {}) => {
+    // Helper: metric rows
+    const metricRows = (m, pairs) => pairs.map(([label, key, suffix]) => {
+      const val = m[key];
+      if (val === undefined || val === null) return '';
+      return `<div class="stat-row"><span class="stat-label">${label}</span><span class="stat-value">${val}${suffix||''}</span></div>`;
+    }).join('');
+
+    // Helper: section group headers
+    const groupRows = (label) => `<div class="stat-group">${label}</div>`;
+
+    // Helper: build full panel with popup detail button
+    const fePanel = (title, iconName, cat, summaryHtml, drawerHtml, detailCount = null) => {
       if (!cat) return '';
       const color = gradeColor(cat.grade);
       const barClass = gradeBarClass(cat.grade);
-      const m = cat.metrics || {};
-      const rows = pairs.map(([label, key, suffix]) => {
-        const rawVal = m[key];
-        const val = (rawVal === undefined || rawVal === null) ? options.defaultValue : rawVal;
-        if (val === undefined || val === null) return '';
-        return `<div class="stat-row"><span class="stat-label">${label}</span><span class="stat-value">${val}${suffix||''}</span></div>`;
-      }).join('');
-      return `<div class="detail-panel ${barClass}">
-        <div class="panel-title"><span class="icon-chip">${icon(iconName)}</span>${title}
+      const panelId = `fe-panel-${++_fePanelCounter}`;
+      // Store content for the popup
+      _feDetailStore[panelId] = { title, sub: `${cat.grade} — ${cat.score}/100`, html: drawerHtml, scoreBreakdown: cat.scoreBreakdown || [] };
+      const countBadge = detailCount !== null && detailCount > 0
+        ? `<span class="fe-count-badge">${detailCount} sorun</span>`
+        : detailCount === 0 ? `<span class="fe-count-badge ok">✓</span>` : '';
+      return `<div class="detail-panel ${barClass} fe-panel">
+        <div class="panel-title"><span class="icon-chip">${icon(iconName)}</span>${title}${countBadge}
           <span style="margin-left:auto;font-size:20px;font-weight:800;color:${color}">${cat.grade}</span>
           <span style="font-size:12px;color:var(--text-muted);font-weight:400;margin-left:6px">${cat.score}/100</span>
         </div>
-        ${rows}
+        ${summaryHtml}
+        <button class="fe-toggle-btn" onclick="showFeDetails('${panelId}')">
+          <span class="icon icon-sm">format_list_bulleted</span> Detayları Göster
+          <span class="fe-toggle-icon" style="transform:none">open_in_new</span>
+        </button>
       </div>`;
     };
 
-    const fePanelGrouped = (title, iconName, cat, groups) => {
-      if (!cat) return '';
-      const color = gradeColor(cat.grade);
-      const barClass = gradeBarClass(cat.grade);
-      const m = cat.metrics || {};
-      const groupHtml = groups.map(([groupLabel, pairs]) => {
-        const rows = pairs.map(([label, key, suffix]) => {
-          const rawVal = m[key];
-          const val = (rawVal === undefined || rawVal === null) ? undefined : rawVal;
-          if (val === undefined) return '';
-          return `<div class="stat-row"><span class="stat-label">${label}</span><span class="stat-value">${val}${suffix||''}</span></div>`;
-        }).join('');
-        if (!rows) return '';
-        return `<div class="stat-group">${groupLabel}</div>${rows}`;
-      }).join('');
-      return `<div class="detail-panel ${barClass}">
-        <div class="panel-title"><span class="icon-chip">${icon(iconName)}</span>${title}
-          <span style="margin-left:auto;font-size:20px;font-weight:800;color:${color}">${cat.grade}</span>
-          <span style="font-size:12px;color:var(--text-muted);font-weight:400;margin-left:6px">${cat.score}/100</span>
+    // ── 1. Page Weight ────────────────────────────────────────────────────────
+    const pw = cats.pageWeight;
+    let pageWeightPanel = '';
+    if (pw) {
+      const m = pw.metrics || {};
+      const rl = pw.resourceList || {};
+      const donutData = [
+        { label: 'JS',    value: m.jsKb||0,    color: '#fbbf24' },
+        { label: 'CSS',   value: m.cssKb||0,   color: '#34d399' },
+        { label: 'Image', value: m.imageKb||0, color: '#60a5fa' },
+        { label: 'Font',  value: m.fontKb||0,  color: '#a78bfa' },
+        { label: 'Other', value: m.otherKb||0, color: '#64748b' },
+      ].filter(d => d.value > 0);
+      const canvasId = `fe-donut-${_fePanelCounter}`;
+      const donutJson = escHtml(JSON.stringify(donutData));
+
+      const summary = `
+        ${groupRows('Boyut Dağılımı')}
+        ${metricRows(m, [['Toplam Ağırlık','totalKb',' KB'],['JS','jsKb',' KB'],['CSS','cssKb',' KB'],['Görsel','imageKb',' KB'],['Font','fontKb',' KB']])}
+        ${groupRows('Optimizasyon')}
+        ${metricRows(m, [['Büyük Görseller','oversizedImages',''],['Sıkıştırılmamış Kaynak','uncompressedKb',' KB'],['Minification Tasarrufu','minificationSavingsKb',' KB']])}
+      `;
+
+      const drawerHtml = `
+        <div class="fe-section-title">Ağırlık Dağılımı (MIME Türüne Göre)</div>
+        <div class="fe-donut-wrap">
+          <canvas class="fe-donut-canvas" id="${canvasId}" width="160" height="160" data-donut="${donutJson}"></canvas>
+          <div class="fe-donut-legend">${donutData.map(d => `<div class="fe-legend-item"><span class="fe-legend-dot" style="background:${d.color}"></span>${d.label}: ${d.value} KB</div>`).join('')}</div>
         </div>
-        ${groupHtml}
-      </div>`;
-    };
+        ${(rl.js||[]).length ? `<div class="fe-section-title">JavaScript Dosyaları (${(rl.js||[]).length})</div>${feFileList(rl.js,'js')}` : ''}
+        ${(rl.css||[]).length ? `<div class="fe-section-title">CSS Dosyaları (${(rl.css||[]).length})</div>${feFileList(rl.css,'css')}` : ''}
+        ${(rl.image||[]).length ? `<div class="fe-section-title">Görseller (${(rl.image||[]).length})</div>${feFileList(rl.image,'image')}` : ''}
+        ${(rl.font||[]).length ? `<div class="fe-section-title">Fontlar (${(rl.font||[]).length})</div>${feFileList(rl.font,'font')}` : ''}
+        ${(pw.details||[]).length ? `<div class="fe-section-title">Optimizasyon Sorunları</div>${feOffenderList(pw.details)}` : ''}
+      `;
+      pageWeightPanel = fePanel('Page Weight', 'scale', pw, summary, drawerHtml, pw.details?.length||0);
+    }
 
-    return [
-      fePanelGrouped('Page Weight', 'scale', cats.pageWeight, [
-        ['Boyut Dağılımı', [['Toplam Ağırlık','totalKb',' KB'],['JS','jsKb',' KB'],['CSS','cssKb',' KB'],['Görsel','imageKb',' KB'],['Font','fontKb',' KB']]],
-        ['Optimizasyon Sorunları', [['Büyük Görseller','oversizedImages',''],['Sıkıştırılmamış Kaynak','uncompressedKb',' KB']]],
-      ]),
-      fePanelGrouped('Requests', 'sync', cats.requests, [
-        ['İstek Sayıları', [['Toplam İstek','totalRequests',''],['Farklı Domain','domains',''],['3rd Party','thirdPartyDomains','']]],
-        ['Sorunlu İstekler', [['404 Hata','notFound',''],['Boş İstek','emptyRequests','']]],
-        ['Görsel Yükleme', [['Fold Altı Görsel','belowFoldImages',''],['Gizli Görsel','hiddenImages','']]],
-      ]),
-      fePanelGrouped('DOM Complexity', 'account_tree', cats.domComplexity, [
-        ['Yapı', [['DOM Elementleri','totalElements',''],['Maks. Derinlik','maxDepth',''],['iframe Sayısı','iframes','']]],
-        ['Sorunlar', [['Tekrarlanan ID','duplicatedIds','']]],
-      ]),
-      fePanelGrouped('JS Complexity', 'bolt', cats.jsComplexity, [
-        ['Performans', [['JS Exec Süresi','execTimeMs',' ms'],['DOM Erişim Sayısı','domAccess','']]],
-        ['Global Kirlilik', [['Scroll Listener','scrollListeners',''],['Global Değişken Sayısı','globalVariables','']]],
-      ]),
-      fePanelGrouped('Bad JS', 'warning', cats.badJs, [
-        ['Hatalar', [['JS Hataları','jsErrors',''],['Console Uyarısı','consoleWarnings','']]],
-        ['Anti-Pattern', [['document.write','documentWriteCalls',''],['Sync XHR','syncXmlHttpRequests','']]],
-      ]),
-      fePanelGrouped('CSS Complexity', 'palette', cats.cssComplexity, [
-        ['Yapı', [['Toplam Kural','totalRules',''],['Karmaşık Seçici','complexSelectors','']]],
-        ['Renk Yönetimi', [['Renk Sayısı','uniqueColors',''],['Benzer Renkler','similarColors','']]],
-        ['Responsive', [['Breakpoint Sayısı','breakpoints',''],['Mobile-First Dışı Sorgu','notMobileFirstQueries','']]],
-      ]),
-      fePanelGrouped('Bad CSS', 'healing', cats.badCss, [
-        ['Hatalar', [['Sözdizim Hatası','syntaxErrors',''],['@import Kullanımı','atImport','']]],
-        ['Tekrarlar', [['Dup. Seçici','duplicatedSelectors',''],['Dup. Özellik','duplicatedProperties',''],['Boş Kural','emptyRules','']]],
-        ['Anti-Pattern', [['!important Kullanımı','importantUsage',''],['Eski Prefix','oldPrefixes',''],['Gereksiz body Seçici','redundantBodySelectors','']]],
-      ]),
-      fePanelGrouped('Server Config', 'dns', cats.serverConfig, [
-        ['Protokol', [['HTTP/1.1 Kaynak','http1Resources','']]],
-        ['Cache Politikası', [['Cachesiz Kaynak','noCacheResources',''],['Cache Devre Dışı','cachingDisabled',''],['Cache Çok Kısa','cachingTooShort','']]],
-        ['Bağlantı', [['Bağlantı Kapandı','connectionsClosed','']]],
-      ]),
-      fePanelGrouped('Web Fonts', 'font_download', cats.webFonts, [
-        ['Kullanım', [['Font Sayısı','webfontCount',''],['Toplam Font KB','totalFontKb',' KB']]],
-        ['Optimizasyon', [['WOFF2 Dışı Format','nonWoff2Count',''],['Büyük Font Dosyası','overweightFonts','']]],
-      ]),
-    ].filter(Boolean).join('');
+    // ── 2. Requests ───────────────────────────────────────────────────────────
+    const req = cats.requests;
+    let requestsPanel = '';
+    if (req) {
+      const m = req.metrics || {};
+      const summary = `
+        ${groupRows('İstek Sayıları')}
+        ${metricRows(m, [['Toplam İstek','totalRequests',''],['Farklı Domain','domains',''],['3rd Party','thirdPartyDomains','']])}
+        ${groupRows('Sorunlu İstekler')}
+        ${metricRows(m, [['404 Hata','notFound',''],['Boş İstek','emptyRequests',''],['Fold Altı Görsel','belowFoldImages',''],['Gizli Görsel','hiddenImages','']])}
+      `;
+      const thirdPartyList = (m.thirdPartyList||[]).length ? `
+        <div class="fe-section-title">3rd Party Domain'ler (${(m.thirdPartyList||[]).length})</div>
+        ${(m.thirdPartyList||[]).map(d => `<div class="offender-row info"><span class="offender-msg">${escHtml(d)}</span></div>`).join('')}
+      ` : '';
+      const drawerHtml = thirdPartyList + (req.details?.length ? `<div class="fe-section-title">Sorunlu İstekler</div>${feOffenderList(req.details)}` : `<div class="fe-empty">Sorun tespit edilmedi ✓</div>`);
+      requestsPanel = fePanel('Requests', 'sync', req, summary, drawerHtml, req.details?.length||0);
+    }
+
+    // ── 3. DOM Complexity ─────────────────────────────────────────────────────
+    const dom = cats.domComplexity;
+    let domPanel = '';
+    if (dom) {
+      const m = dom.metrics || {};
+      const summary = `
+        ${groupRows('Yapı')}
+        ${metricRows(m, [['DOM Elementleri','totalElements',''],['Maks. Derinlik','maxDepth',''],['iframe Sayısı','iframes','']])}
+        ${groupRows('Sorunlar')}
+        ${metricRows(m, [['Tekrarlanan ID','duplicatedIds','']])}
+      `;
+      const dupIds = (dom.details||[]).filter(d=>d.type==='duplicate-id');
+      const heavyNodes = (dom.details||[]).filter(d=>d.type==='heavy-node');
+      const drawerHtml = `
+        ${dupIds.length ? `<div class="fe-section-title">Tekrarlanan ID'ler (${dupIds.length})</div>${feOffenderList(dupIds)}` : ''}
+        ${heavyNodes.length ? `<div class="fe-section-title">En Ağır Node'lar</div>${feOffenderList(heavyNodes)}` : ''}
+        ${!dupIds.length && !heavyNodes.length ? `<div class="fe-empty">Sorun tespit edilmedi ✓</div>` : ''}
+      `;
+      domPanel = fePanel('DOM Complexity', 'account_tree', dom, summary, drawerHtml, dupIds.length);
+    }
+
+    // ── 4. JS Complexity ──────────────────────────────────────────────────────
+    const jsc = cats.jsComplexity;
+    let jsComplexityPanel = '';
+    if (jsc) {
+      const m = jsc.metrics || {};
+      const summary = `
+        ${groupRows('Performans')}
+        ${metricRows(m, [['JS Exec Süresi','execTimeMs',' ms'],['DOM Erişim Sayısı','domAccess','']])}
+        ${groupRows('Global Kirlilik')}
+        ${metricRows(m, [['Scroll Listener','scrollListeners',''],['Global Değişken','globalVariables','']])}
+      `;
+      const globals = (jsc.details||[]).filter(d=>d.type==='global-var');
+      const drawerHtml = globals.length
+        ? `<div class="fe-section-title">Global Değişkenler (${globals.length})</div>${feOffenderList(globals)}`
+        : `<div class="fe-empty">Global kirlilik tespit edilmedi ✓</div>`;
+      jsComplexityPanel = fePanel('JS Complexity', 'bolt', jsc, summary, drawerHtml, globals.length > 30 ? globals.length - 30 : 0);
+    }
+
+    // ── 5. Bad JS ─────────────────────────────────────────────────────────────
+    const badJs = cats.badJs;
+    let badJsPanel = '';
+    if (badJs) {
+      const m = badJs.metrics || {};
+      const summary = `
+        ${groupRows('Hatalar')}
+        ${metricRows(m, [['JS Hataları','jsErrors',''],['Console Uyarısı','consoleWarnings','']])}
+        ${groupRows('Anti-Pattern')}
+        ${metricRows(m, [['document.write','documentWriteCalls',''],['Sync XHR','syncXmlHttpRequests','']])}
+      `;
+      const issues = badJs.details || [];
+      const drawerHtml = issues.length
+        ? `<div class="fe-section-title">Tespit Edilen Sorunlar (${issues.length})</div>${feOffenderList(issues)}`
+        : `<div class="fe-empty">JS hatası tespit edilmedi ✓</div>`;
+      badJsPanel = fePanel('Bad JS', 'warning', badJs, summary, drawerHtml, (m.jsErrors||0) + (m.documentWriteCalls||0) + (m.syncXmlHttpRequests||0));
+    }
+
+    // ── 6. CSS Complexity ─────────────────────────────────────────────────────
+    const cssc = cats.cssComplexity;
+    let cssComplexityPanel = '';
+    if (cssc) {
+      const m = cssc.metrics || {};
+      const summary = `
+        ${groupRows('Yapı')}
+        ${metricRows(m, [['Toplam Kural','totalRules',''],['Karmaşık Seçici','complexSelectors','']])}
+        ${groupRows('Renk Yönetimi')}
+        ${metricRows(m, [['Renk Sayısı','uniqueColors',''],['Benzer Renkler','similarColors','']])}
+        ${groupRows('Responsive')}
+        ${metricRows(m, [['Breakpoint','breakpoints',''],['Mobile-First Dışı','notMobileFirstQueries','']])}
+      `;
+      const complexSels = (cssc.details||[]).filter(d=>d.type==='complex-selector');
+      const similarColors = (cssc.details||[]).filter(d=>d.type==='similar-colors');
+      const drawerHtml = `
+        ${complexSels.length ? `<div class="fe-section-title">Karmaşık Seçiciler (${complexSels.length})</div>${feOffenderList(complexSels)}` : ''}
+        ${similarColors.length ? `<div class="fe-section-title">Benzer Renk Çiftleri (${similarColors.length})</div>${feOffenderList(similarColors)}` : ''}
+        ${!complexSels.length && !similarColors.length ? `<div class="fe-empty">Sorun tespit edilmedi ✓</div>` : ''}
+      `;
+      cssComplexityPanel = fePanel('CSS Complexity', 'palette', cssc, summary, drawerHtml, complexSels.length + similarColors.length);
+    }
+
+    // ── 7. Bad CSS ────────────────────────────────────────────────────────────
+    const badCss = cats.badCss;
+    let badCssPanel = '';
+    if (badCss) {
+      const m = badCss.metrics || {};
+      const summary = `
+        ${groupRows('Hatalar')}
+        ${metricRows(m, [['Sözdizim Hatası','syntaxErrors',''],['@import','atImport','']])}
+        ${groupRows('Tekrarlar')}
+        ${metricRows(m, [['Dup. Seçici','duplicatedSelectors',''],['Dup. Özellik','duplicatedProperties',''],['Boş Kural','emptyRules','']])}
+        ${groupRows('Anti-Pattern')}
+        ${metricRows(m, [['!important','importantUsage',''],['Eski Prefix','oldPrefixes',''],['Gereksiz body','redundantBodySelectors','']])}
+      `;
+      const issues = badCss.details || [];
+      const drawerHtml = issues.length
+        ? `<div class="fe-section-title">Tespit Edilen Sorunlar (${issues.length})</div>${feOffenderList(issues)}`
+        : `<div class="fe-empty">CSS sorunu tespit edilmedi ✓</div>`;
+      badCssPanel = fePanel('Bad CSS', 'healing', badCss, summary, drawerHtml, issues.length);
+    }
+
+    // ── 8. Server Config ──────────────────────────────────────────────────────
+    const srv = cats.serverConfig;
+    let serverPanel = '';
+    if (srv) {
+      const m = srv.metrics || {};
+      const summary = `
+        ${groupRows('Protokol')}
+        ${metricRows(m, [['HTTP/1.1 Kaynak','http1Resources','']])}
+        ${groupRows('Cache Politikası')}
+        ${metricRows(m, [['Cachesiz Kaynak','noCacheResources',''],['Cache Devre Dışı','cachingDisabled',''],['Cache Çok Kısa','cachingTooShort','']])}
+        ${groupRows('Bağlantı')}
+        ${metricRows(m, [['Bağlantı Kapandı','connectionsClosed','']])}
+      `;
+      const issues = srv.details || [];
+      const drawerHtml = issues.length
+        ? `<div class="fe-section-title">Sorunlu Kaynaklar (${issues.length})</div>${feOffenderList(issues)}`
+        : `<div class="fe-empty">Server config sorunu tespit edilmedi ✓</div>`;
+      serverPanel = fePanel('Server Config', 'dns', srv, summary, drawerHtml, issues.length);
+    }
+
+    // ── 9. Web Fonts ──────────────────────────────────────────────────────────
+    const wf = cats.webFonts;
+    let webFontsPanel = '';
+    if (wf) {
+      const m = wf.metrics || {};
+      const summary = `
+        ${groupRows('Kullanım')}
+        ${metricRows(m, [['Font Sayısı','webfontCount',''],['Toplam Font KB','totalFontKb',' KB']])}
+        ${groupRows('Optimizasyon')}
+        ${metricRows(m, [['WOFF2 Dışı Format','nonWoff2Count',''],['Büyük Font Dosyası','overweightFonts','']])}
+      `;
+      const issues = wf.details || [];
+      const drawerHtml = issues.length
+        ? `<div class="fe-section-title">Font Sorunları (${issues.length})</div>${feOffenderList(issues)}`
+        : `<div class="fe-empty">Font sorunu tespit edilmedi ✓</div>`;
+      webFontsPanel = fePanel('Web Fonts', 'font_download', wf, summary, drawerHtml, issues.length);
+    }
+
+    return [pageWeightPanel, requestsPanel, domPanel, jsComplexityPanel, badJsPanel, cssComplexityPanel, badCssPanel, serverPanel, webFontsPanel].filter(Boolean).join('');
   }
 
   function buildMetaPanel(r) {

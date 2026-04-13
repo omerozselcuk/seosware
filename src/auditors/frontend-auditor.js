@@ -120,8 +120,8 @@ function hexColorDistance(h1, h2) {
   }
 }
 
-function buildCategory(score, metrics, details = []) {
-  return { score, grade: calcGrade(score), metrics, details };
+function buildCategory(score, metrics, details = [], extra = {}) {
+  return { score, grade: calcGrade(score), metrics, details, ...extra };
 }
 
 // CDP type (Script, Stylesheet, Image, Font, XHR, Fetch, Document, Other) -> internal type (js, css, image, font, other)
@@ -250,13 +250,31 @@ async function auditPageWeight(cdp, networkData, page) {
   const s5 = scoreMetric(minificationSavings, 0, 200);
   const score = Math.round((s1*2 + s2 + s3 + s4 + s5) / 6);
 
+  const scoreBreakdown = [
+    { label: 'Toplam Ağırlık', value: totalKb, suffix: ' KB', good: THRESHOLDS.pageWeight.totalKb.good, bad: THRESHOLDS.pageWeight.totalKb.bad, score: s1, weight: 2 },
+    { label: 'Görsel Ağırlığı', value: metrics.imageKb, suffix: ' KB', good: THRESHOLDS.pageWeight.imageKb.good, bad: THRESHOLDS.pageWeight.imageKb.bad, score: s2, weight: 1 },
+    { label: 'Büyük Görseller', value: oversizedImages.length, suffix: '', good: 0, bad: 5, score: s3, weight: 1 },
+    { label: 'Sıkıştırılmamış Kaynak', value: metrics.uncompressedKb, suffix: ' KB', good: 0, bad: 500, score: s4, weight: 1 },
+    { label: 'Minification Tasarrufu', value: minificationSavings, suffix: ' KB', good: 0, bad: 200, score: s5, weight: 1 },
+  ];
+
   const details = [
     ...oversizedImages.map(i => ({ type: 'oversized-image', ...i })),
     ...uncompressedJs.map(r => ({ type: 'uncompressed-js', ...r })),
     ...uncompressedCss.map(r => ({ type: 'uncompressed-css', ...r })),
   ];
 
-  return buildCategory(score, metrics, details);
+  // Resource list grouped by type for frontend drill-down (top 50 per type, sorted by size desc)
+  const resourceList = {};
+  ['js', 'css', 'image', 'font', 'other'].forEach(t => {
+    resourceList[t] = resources
+      .filter(r => r.type === t && r.transferSize > 0)
+      .sort((a, b) => (b.transferSize || 0) - (a.transferSize || 0))
+      .slice(0, 50)
+      .map(r => ({ url: r.url, sizeKb: Math.round((r.transferSize || 0) / 1024) }));
+  });
+
+  return buildCategory(score, metrics, details, { resourceList, scoreBreakdown });
 }
 
 async function auditRequests(networkData) {
@@ -319,6 +337,16 @@ async function auditRequests(networkData) {
   ];
   const score = Math.round(scores.reduce((a,b) => a+b, 0) / scores.length);
 
+  const scoreBreakdown = [
+    { label: 'Toplam İstek', value: totalRequests, suffix: '', good: THRESHOLDS.requests.total.good, bad: THRESHOLDS.requests.total.bad, score: scores[0], weight: 1 },
+    { label: 'Farklı Domain', value: domainSet.size, suffix: '', good: THRESHOLDS.requests.domains.good, bad: THRESHOLDS.requests.domains.bad, score: scores[1], weight: 1 },
+    { label: '404 Hata', value: notFound.length, suffix: '', good: 0, bad: 1, score: scores[2], weight: 1 },
+    { label: 'Boş İstek', value: emptyRequests.length, suffix: '', good: THRESHOLDS.requests.empty.good, bad: THRESHOLDS.requests.empty.bad, score: scores[3], weight: 1 },
+    { label: 'Fold Altı Görsel', value: belowFold.length, suffix: '', good: THRESHOLDS.requests.belowFold.good, bad: THRESHOLDS.requests.belowFold.bad, score: scores[4], weight: 1 },
+    { label: 'Gizli Görsel', value: hiddenImages.length, suffix: '', good: THRESHOLDS.requests.hidden.good, bad: THRESHOLDS.requests.hidden.bad, score: scores[5], weight: 1 },
+    { label: 'Aynı İçerik', value: identicalGroups.length, suffix: '', good: THRESHOLDS.requests.identical.good, bad: THRESHOLDS.requests.identical.bad, score: scores[6], weight: 1 },
+  ];
+
   const details = [
     ...notFound.map(r => ({ type: '404', url: r.url })),
     ...emptyRequests.map(r => ({ type: 'empty-request', url: r.url, status: r.status })),
@@ -327,7 +355,7 @@ async function auditRequests(networkData) {
     ...hiddenImages.map(r => ({ type: 'hidden-image', url: r.url })),
   ];
 
-  return buildCategory(score, metrics, details);
+  return buildCategory(score, metrics, details, { scoreBreakdown });
 }
 
 async function auditDOMComplexity(page) {
@@ -377,12 +405,19 @@ async function auditDOMComplexity(page) {
   ];
   const score = Math.round(scores.reduce((a,b) => a+b, 0) / scores.length);
 
+  const scoreBreakdown = [
+    { label: 'DOM Elementleri', value: dom.totalElements, suffix: '', good: THRESHOLDS.dom.elements.good, bad: THRESHOLDS.dom.elements.bad, score: scores[0], weight: 1 },
+    { label: 'Maks. Derinlik', value: dom.maxDepth, suffix: '', good: THRESHOLDS.dom.depth.good, bad: THRESHOLDS.dom.depth.bad, score: scores[1], weight: 1 },
+    { label: 'iframe Sayısı', value: dom.iframes, suffix: '', good: THRESHOLDS.dom.iframes.good, bad: THRESHOLDS.dom.iframes.bad, score: scores[2], weight: 1 },
+    { label: 'Tekrarlanan ID', value: dom.dupIds.length, suffix: '', good: 0, bad: 5, score: scores[3], weight: 1 },
+  ];
+
   const details = [
     ...dom.dupIds.map(d => ({ type: 'duplicate-id', id: d.id, count: d.count })),
     ...dom.heavyNodes.map(n => ({ type: 'heavy-node', ...n })),
   ];
 
-  return buildCategory(score, metrics, details);
+  return buildCategory(score, metrics, details, { scoreBreakdown });
 }
 
 async function auditJSComplexity(page, cdp, jsErrors, consoleWarnings) {
@@ -476,9 +511,16 @@ async function auditJSComplexity(page, cdp, jsErrors, consoleWarnings) {
     scoreMetric(globalCount, THRESHOLDS.jsComplexity.globals.good, THRESHOLDS.jsComplexity.globals.bad),
   ];
   const score = Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
+
+  const scoreBreakdown = [
+    { label: 'JS Exec Süresi', value: execTimeMs, suffix: ' ms', good: THRESHOLDS.jsComplexity.execTimeMs.good, bad: THRESHOLDS.jsComplexity.execTimeMs.bad, score: scores[0], weight: 1 },
+    { label: 'DOM Erişim Sayısı', value: domAccessCount, suffix: '', good: THRESHOLDS.jsComplexity.domAccess.good, bad: THRESHOLDS.jsComplexity.domAccess.bad, score: scores[1], weight: 1 },
+    { label: 'Scroll Listener', value: scrollListeners, suffix: '', good: THRESHOLDS.jsComplexity.scrollListeners.good, bad: THRESHOLDS.jsComplexity.scrollListeners.bad, score: scores[2], weight: 1 },
+    { label: 'Global Değişken', value: globalCount, suffix: '', good: THRESHOLDS.jsComplexity.globals.good, bad: THRESHOLDS.jsComplexity.globals.bad, score: scores[3], weight: 1 },
+  ];
   const details = globalNames.map(g => ({ type: 'global-var', name: g }));
 
-  return buildCategory(score, metrics, details);
+  return buildCategory(score, metrics, details, { scoreBreakdown });
 }
 
 async function auditBadJS(page, jsErrors, consoleWarnings) {
@@ -511,7 +553,20 @@ async function auditBadJS(page, jsErrors, consoleWarnings) {
   ];
   const score = Math.round(scores.reduce((a,b) => a+b, 0) / scores.length);
 
-  return buildCategory(score, metrics, []);
+  const scoreBreakdown = [
+    { label: 'JS Hataları', value: jsErrors.length, suffix: '', good: THRESHOLDS.badJs.errors.good, bad: THRESHOLDS.badJs.errors.bad, score: scores[0], weight: 1 },
+    { label: 'document.write', value: badJs.docWriteCount, suffix: '', good: 0, bad: 1, score: scores[1], weight: 1 },
+    { label: 'Sync XHR', value: badJs.syncXhrCount, suffix: '', good: 0, bad: 1, score: scores[2], weight: 1 },
+    { label: 'Console Uyarısı', value: consoleWarnings, suffix: '', good: THRESHOLDS.badJs.consoleWarnings.good, bad: THRESHOLDS.badJs.consoleWarnings.bad, score: scores[3], weight: 1 },
+  ];
+
+  const details = [
+    ...jsErrors.slice(0, 20).map(msg => ({ type: 'js-error', message: msg })),
+    ...(badJs.docWriteCount > 0 ? [{ type: 'doc-write', count: badJs.docWriteCount }] : []),
+    ...(badJs.syncXhrCount > 0 ? [{ type: 'sync-xhr', count: badJs.syncXhrCount }] : []),
+  ];
+
+  return buildCategory(score, metrics, details, { scoreBreakdown });
 }
 
 async function auditCSSComplexity(page) {
@@ -522,7 +577,9 @@ async function auditCSSComplexity(page) {
       complexSelectorExamples: [],
       allColors: new Set(),
       breakpoints: new Set(),
+      breakpointValues: [],
       notMobileFirstCount: 0,
+      notMobileFirstExamples: [],
     };
 
     const COLOR_RE = /#([0-9a-fA-F]{3,8})\b|rgba?\([^)]+\)|hsla?\([^)]+\)/g;
@@ -541,7 +598,7 @@ async function auditCSSComplexity(page) {
             const depth = selector.split(/[\s>+~]+/).length;
             if (depth >= 3) {
               results.complexSelectors++;
-              if (results.complexSelectorExamples.length < 10) {
+              if (results.complexSelectorExamples.length < 50) {
                 results.complexSelectorExamples.push(selector.slice(0, 100));
               }
             }
@@ -554,11 +611,20 @@ async function auditCSSComplexity(page) {
           colorMatches.forEach(c => results.allColors.add(c.toLowerCase()));
         }
 
-        // Media queries
         if (rule.conditionText) {
           const bp = rule.conditionText.match(/\d+px/);
-          if (bp) results.breakpoints.add(bp[0]);
-          if (/max-width/.test(rule.conditionText)) results.notMobileFirstCount++;
+          if (bp) {
+            results.breakpoints.add(bp[0]);
+            if (results.breakpointValues.length < 30) {
+              results.breakpointValues.push(bp[0]);
+            }
+          }
+          if (/max-width/.test(rule.conditionText)) {
+            results.notMobileFirstCount++;
+            if (results.notMobileFirstExamples.length < 20) {
+              results.notMobileFirstExamples.push(rule.conditionText.slice(0, 120));
+            }
+          }
         }
       });
     });
@@ -570,7 +636,9 @@ async function auditCSSComplexity(page) {
       uniqueColors: results.allColors.size,
       allColors: [...results.allColors],
       breakpoints: results.breakpoints.size,
+      breakpointValues: [...new Set(results.breakpointValues)],
       notMobileFirstCount: results.notMobileFirstCount,
+      notMobileFirstExamples: results.notMobileFirstExamples,
     };
   });
 
@@ -606,12 +674,30 @@ async function auditCSSComplexity(page) {
   ];
   const score = Math.round(scores.reduce((a,b) => a+b, 0) / scores.length);
 
-  const details = [
-    ...cssData.complexSelectorExamples.map(s => ({ type: 'complex-selector', selector: s })),
-    ...similarColorPairs.slice(0,5).map(p => ({ type: 'similar-colors', ...p })),
+  const scoreBreakdown = [
+    { label: 'Toplam Kural', value: cssData.totalRules, suffix: '', good: THRESHOLDS.cssComplexity.rules.good, bad: THRESHOLDS.cssComplexity.rules.bad, score: scores[0], weight: 1 },
+    { label: 'Karmaşık Seçici', value: cssData.complexSelectors, suffix: '', good: THRESHOLDS.cssComplexity.complexSelectors.good, bad: THRESHOLDS.cssComplexity.complexSelectors.bad, score: scores[1], weight: 1 },
+    { label: 'Renk Sayısı', value: cssData.uniqueColors, suffix: '', good: THRESHOLDS.cssComplexity.colors.good, bad: THRESHOLDS.cssComplexity.colors.bad, score: scores[2], weight: 1 },
+    { label: 'Benzer Renkler', value: similarColorPairs.length, suffix: '', good: THRESHOLDS.cssComplexity.similarColors.good, bad: THRESHOLDS.cssComplexity.similarColors.bad, score: scores[3], weight: 1 },
+    { label: 'Breakpoint', value: cssData.breakpoints, suffix: '', good: THRESHOLDS.cssComplexity.breakpoints.good, bad: THRESHOLDS.cssComplexity.breakpoints.bad, score: scores[4], weight: 1 },
+    { label: 'Mobile-First Dışı', value: cssData.notMobileFirstCount, suffix: '', good: THRESHOLDS.cssComplexity.notMobileFirst.good, bad: THRESHOLDS.cssComplexity.notMobileFirst.bad, score: scores[5], weight: 1 },
   ];
 
-  return buildCategory(score, metrics, details);
+  const details = [
+    ...cssData.complexSelectorExamples.map(s => ({ type: 'complex-selector', selector: s })),
+    ...similarColorPairs.slice(0,10).map(p => ({ type: 'similar-colors', ...p })),
+  ];
+
+  // Extra data for detailed view and JSON export
+  const extras = {
+    scoreBreakdown,
+    allColors: cssData.allColors.slice(0, 200),
+    breakpointValues: cssData.breakpointValues || [],
+    notMobileFirstExamples: cssData.notMobileFirstExamples || [],
+    complexSelectorExamples: cssData.complexSelectorExamples,
+  };
+
+  return buildCategory(score, metrics, details, extras);
 }
 
 async function auditBadCSS(page) {
@@ -624,9 +710,11 @@ async function auditBadCSS(page) {
       dupProperties: 0,
       emptyRules: 0,
       importantCount: 0,
+      importantExamples: [],
       oldPrefixes: 0,
       oldPrefixExamples: [],
       redundantBody: 0,
+      redundantBodyExamples: [],
     };
 
     const OLD_PREFIXES = ['-webkit-animation', '-webkit-transform', '-moz-transform', '-ms-transform', '-webkit-flex', '-ms-flexbox'];
@@ -655,20 +743,29 @@ async function auditBadCSS(page) {
         if (!cssText.trim()) results.emptyRules++;
 
         // !important
-        results.importantCount += (cssText.match(/!important/g) || []).length;
+        const impMatches = (cssText.match(/!important/g) || []).length;
+        results.importantCount += impMatches;
+        if (impMatches > 0 && results.importantExamples.length < 20) {
+          results.importantExamples.push(rule.selectorText.slice(0, 80));
+        }
 
         // Old prefixes
         OLD_PREFIXES.forEach(prefix => {
           if (cssText.includes(prefix)) {
             results.oldPrefixes++;
-            if (results.oldPrefixExamples.length < 5) {
+            if (results.oldPrefixExamples.length < 20) {
               results.oldPrefixExamples.push(`${rule.selectorText} — ${prefix}`);
             }
           }
         });
 
         // Redundant body selectors
-        if (/^body\s+\w/.test(rule.selectorText)) results.redundantBody++;
+        if (/^body\s+\w/.test(rule.selectorText)) {
+          results.redundantBody++;
+          if (results.redundantBodyExamples.length < 20) {
+            results.redundantBodyExamples.push(rule.selectorText.slice(0, 100));
+          }
+        }
 
         // Duplicated properties
         const props = {};
@@ -680,7 +777,7 @@ async function auditBadCSS(page) {
 
     const dupSelectorCount = Object.values(results.dupSelectors).filter(c => c > 1).length;
     const dupSelectorExamples = Object.entries(results.dupSelectors)
-      .filter(([,c]) => c > 1).slice(0,5).map(([s]) => s);
+      .filter(([,c]) => c > 1).sort((a,b) => b[1]-a[1]).slice(0,20).map(([s,c]) => ({ selector: s, count: c }));
 
     return {
       syntaxErrors: results.syntaxErrors,
@@ -691,9 +788,11 @@ async function auditBadCSS(page) {
       dupProperties: results.dupProperties,
       emptyRules: results.emptyRules,
       importantCount: results.importantCount,
+      importantExamples: results.importantExamples,
       oldPrefixes: results.oldPrefixes,
       oldPrefixExamples: results.oldPrefixExamples,
       redundantBody: results.redundantBody,
+      redundantBodyExamples: results.redundantBodyExamples,
     };
   });
 
@@ -720,13 +819,35 @@ async function auditBadCSS(page) {
   ];
   const score = Math.round(scores.reduce((a,b) => a+b, 0) / scores.length);
 
-  const details = [
-    ...cssData.importUrls.map(u => ({ type: 'css-import', url: u })),
-    ...cssData.dupSelectorExamples.map(s => ({ type: 'duplicate-selector', selector: s })),
-    ...cssData.oldPrefixExamples.map(s => ({ type: 'old-prefix', text: s })),
+  const scoreBreakdown = [
+    { label: 'Sözdizim Hatası', value: cssData.syntaxErrors, suffix: '', good: THRESHOLDS.badCss.syntaxErrors.good, bad: THRESHOLDS.badCss.syntaxErrors.bad, score: scores[0], weight: 1 },
+    { label: '@import', value: cssData.atImports, suffix: '', good: 0, bad: 1, score: scores[1], weight: 1 },
+    { label: 'Dup. Seçici', value: cssData.dupSelectors, suffix: '', good: THRESHOLDS.badCss.dupSelectors.good, bad: THRESHOLDS.badCss.dupSelectors.bad, score: scores[2], weight: 1 },
+    { label: 'Dup. Özellik', value: cssData.dupProperties, suffix: '', good: THRESHOLDS.badCss.dupProperties.good, bad: THRESHOLDS.badCss.dupProperties.bad, score: scores[3], weight: 1 },
+    { label: 'Boş Kural', value: cssData.emptyRules, suffix: '', good: THRESHOLDS.badCss.emptyRules.good, bad: THRESHOLDS.badCss.emptyRules.bad, score: scores[4], weight: 1 },
+    { label: '!important', value: cssData.importantCount, suffix: '', good: THRESHOLDS.badCss.important.good, bad: THRESHOLDS.badCss.important.bad, score: scores[5], weight: 1 },
+    { label: 'Eski Prefix', value: cssData.oldPrefixes, suffix: '', good: THRESHOLDS.badCss.oldPrefixes.good, bad: THRESHOLDS.badCss.oldPrefixes.bad, score: scores[6], weight: 1 },
+    { label: 'Gereksiz body', value: cssData.redundantBody, suffix: '', good: THRESHOLDS.badCss.redundantBody.good, bad: THRESHOLDS.badCss.redundantBody.bad, score: scores[7], weight: 1 },
   ];
 
-  return buildCategory(score, metrics, details);
+  const details = [
+    ...cssData.importUrls.map(u => ({ type: 'css-import', url: u })),
+    ...cssData.dupSelectorExamples.map(s => ({ type: 'duplicate-selector', selector: s.selector || s, count: s.count })),
+    ...cssData.oldPrefixExamples.map(s => ({ type: 'old-prefix', text: s })),
+    ...cssData.importantExamples.map(s => ({ type: 'important-usage', selector: s })),
+    ...cssData.redundantBodyExamples.map(s => ({ type: 'redundant-body', selector: s })),
+  ];
+
+  // Extra data for detailed view and JSON export
+  const extras = {
+    scoreBreakdown,
+    dupSelectorExamples: cssData.dupSelectorExamples,
+    importantExamples: cssData.importantExamples,
+    oldPrefixExamples: cssData.oldPrefixExamples,
+    redundantBodyExamples: cssData.redundantBodyExamples,
+  };
+
+  return buildCategory(score, metrics, details, extras);
 }
 
 async function auditServerConfig(networkData) {
@@ -778,14 +899,21 @@ async function auditServerConfig(networkData) {
   ];
   const score = Math.round(scores.reduce((a,b) => a+b, 0) / scores.length);
 
-  const details = [
-    ...http1Resources.slice(0,10).map(r => ({ type: 'http1', ...r })),
-    ...noCacheResources.slice(0,10).map(r => ({ type: 'no-cache', ...r })),
-    ...cachingDisabled.slice(0,5).map(r => ({ type: 'caching-disabled', ...r })),
-    ...cachingTooShort.slice(0,5).map(r => ({ type: 'caching-too-short', ...r })),
+  const scoreBreakdown = [
+    { label: 'HTTP/1.1 Kaynak', value: http1Resources.length, suffix: '', good: THRESHOLDS.serverConfig.http1Resources.good, bad: THRESHOLDS.serverConfig.http1Resources.bad, score: scores[0], weight: 1 },
+    { label: 'Cachesiz Kaynak', value: noCacheResources.length, suffix: '', good: THRESHOLDS.serverConfig.noCacheResources.good, bad: THRESHOLDS.serverConfig.noCacheResources.bad, score: scores[1], weight: 1 },
+    { label: 'Cache Devre Dışı', value: cachingDisabled.length, suffix: '', good: THRESHOLDS.serverConfig.cachingDisabled.good, bad: THRESHOLDS.serverConfig.cachingDisabled.bad, score: scores[2], weight: 1 },
+    { label: 'Cache Çok Kısa', value: cachingTooShort.length, suffix: '', good: THRESHOLDS.serverConfig.cachingTooShort.good, bad: THRESHOLDS.serverConfig.cachingTooShort.bad, score: scores[3], weight: 1 },
   ];
 
-  return buildCategory(score, metrics, details);
+  const details = [
+    ...http1Resources.slice(0,50).map(r => ({ type: 'http1', ...r })),
+    ...noCacheResources.slice(0,50).map(r => ({ type: 'no-cache', ...r })),
+    ...cachingDisabled.slice(0,20).map(r => ({ type: 'caching-disabled', ...r })),
+    ...cachingTooShort.slice(0,20).map(r => ({ type: 'caching-too-short', ...r })),
+  ];
+
+  return buildCategory(score, metrics, details, { scoreBreakdown });
 }
 
 async function auditWebFonts(networkData) {
@@ -820,12 +948,18 @@ async function auditWebFonts(networkData) {
   ];
   const score = Math.round(scores.reduce((a,b) => a+b, 0) / scores.length);
 
+  const scoreBreakdown = [
+    { label: 'Font Sayısı', value: fonts.length, suffix: '', good: THRESHOLDS.webFonts.count.good, bad: THRESHOLDS.webFonts.count.bad, score: scores[0], weight: 1 },
+    { label: 'Toplam Font KB', value: totalFontKb, suffix: ' KB', good: THRESHOLDS.webFonts.totalKb.good, bad: THRESHOLDS.webFonts.totalKb.bad, score: scores[1], weight: 1 },
+    { label: 'WOFF2 Dışı Format', value: nonWoff2.length, suffix: '', good: THRESHOLDS.webFonts.notWoff2.good, bad: THRESHOLDS.webFonts.notWoff2.bad, score: scores[2], weight: 1 },
+  ];
+
   const details = [
     ...nonWoff2.map(f => ({ type: 'non-woff2-font', ...f })),
     ...overweightFonts.map(f => ({ type: 'overweight-font', ...f })),
   ];
 
-  return buildCategory(score, metrics, details);
+  return buildCategory(score, metrics, details, { scoreBreakdown });
 }
 
 // ─── Network Data Collector (CDP) ─────────────────────────────────────────────

@@ -1,47 +1,52 @@
-# 🔍 Seosware
+# 🔍 Seosware: Advanced SEO & Frontend Quality Auditor
 
-**Advanced Playwright-based SEO Auditor** with AI Search Readiness analysis and a local web dashboard.
+**Advanced Playwright-based SEO Auditor** with AI Search Readiness (AEO) analysis and a local web dashboard.
 
-Seosware crawls your pages with a real Chromium browser, extracts 100+ SEO signals, and scores your site's readiness for both traditional search engines and AI-powered search (ChatGPT, Perplexity, Claude, Google AI Overviews).
+Seosware crawls your pages with a real Chromium browser, extracts **117+ unique SEO and Frontend signals**, and scores your site's readiness for both traditional search engines and AI-powered search (ChatGPT, Perplexity, Claude, Google AI Overviews).
 
 ---
 
-## ✨ Features
+## 📊 Seosware By The Numbers
 
-### 🕷️ Core SEO Audit
-- **Site-wide Crawler** — Orphan pages detection, link graph, crawl depth, and near-duplicate content similarity checking
-- **Meta Tags** — Title, Description, Canonical, Open Graph, Twitter Cards
-- **Content** — Heading hierarchy (H1-H6), JSON-LD schema validation, word count
-- **Images** — Alt attribute checks, lazy-load verification via scroll simulation
-- **Links** — Internal/external, target blank rels, pagination (rel next/prev), infinite scroll, ARIA labels, tab order
-- **Performance** — INP (Interaction to Next Paint) sim, Unused CSS/JS coverage, LCP, CLS, Long Tasks, render-blocking resources
-- **Rendering** — SSR vs CSR comparison with cosine similarity scoring
-- **Mobile** — Viewport overflow, tap target sizes, font size issues
-- **Security** — HTTPS, HSTS, X-Frame-Options, mixed content, large files
+Seosware doesn't just check meta tags; it performs a holistic audit across 4 major disciplines:
 
-### 🤖 AI Search Readiness
-- **`/llms.txt`** — Existence and spec compliance (H1, blockquote, markdown format)
-- **Bot Blocking Check** — Validates if ClaudeBot, GPTBot, or CCBot are blocked by `robots.txt` or headers
-- **Readability Grade** — Overall letter grade (A+ to F) for AI accessibility
+*   **51+ Frontend & Performance Checkpoints:** Page weight, DOM complexity, JS/CSS health, and server configurations.
+*   **41+ Core SEO & Content Metrics:** Heading hierarchy, schema validation, link graph, and mobile accessibility.
+*   **10+ SSR vs CSR Comparison Points:** Detection of content discrepancies between server-side and client-side rendering using Cosine Similarity.
+*   **15+ AI Search Readiness (AEO) Indicators:** Bot permissions, `/llms.txt` compliance, and E-E-A-T scoring.
 
-### 📈 History & Delta Engine
-- **Project Batches** — Save named lists of URLs (Projects) and run them continuously.
-- **History Tracking** — Saves all previous run snapshots locally to JSON.
-- **Delta Analysis** — Compares any two historical snapshots to find regressions.
+---
 
-### ✨ Seosware Pro: Next-Gen AI Insight Engine (v2.7.1)
-- **Deep Gemini Analysis** — Automated analysis covering Meta, Content, Links, Performance, Frontend Quality, Mobile UX, Image Optimization, Security, and AI Search Readiness.
-- **Ad-Hoc AI Insights** — One-click AI interpretation of audit results directly from the search tab (no project required).
-- **Smart Retry & Fallback** — Triple retry mechanism for transient API errors (503/429) with automatic fallback to **Gemini 2.0 Flash** if the primary model is unavailable.
-- **Improved UI & Readability** — High-contrast CSS overrides for AI reports to ensure perfect legibility on dark theme dashboards.
-- **PDF Export & Caching** — Professional PDF generation with local caching for instant report retrieval.
-- **Comprehensive Action Plans** — Prioritized, multi-category task lists (P0-P3) synthesized from hundreds of technical signals.
+## ✨ Key Features
 
-### 📊 Local Dashboard
-- Dark-mode glassmorphism UI
-- Real-time SSE progress streaming
-- Score cards with color-coded grades
-- Detail panels for every audit category
+### 🕷️ Site-wide Crawler & Delta Engine
+- **Orphan Page Detection** — Find pages that are not linked from any other page.
+- **Link Graph & Crawl Depth** — Analyze your site's architecture.
+- **Near-duplicate Detection** — Identify content similarity issues.
+- **Delta Analysis** — Compare any two historical snapshots to find regressions or improvements over time.
+
+### 🎨 Advanced Frontend Analysis (51+ Points)
+- **Runtime Performance** — LCP, CLS, and **INP (Interaction to Next Paint)** simulation using real user-flow models.
+- **Code Complexity** — JS execution time, DOM access frequency, scroll listeners, and global variable leakage.
+- **CSS Health** — Detection of `!important` abuse, duplicate selectors, unused rules, and non-mobile-first queries.
+- **Server Config** — HTTP/2+ verification, caching headers (too short/missing), and Brotli/Gzip audit.
+- **Visual Audit** — Tap target sizes, viewport overflow, and font accessibility.
+
+### 🤖 AI Search Readiness (AEO - Answer Engine Optimization)
+- **`/llms.txt` Audit** — Verify existence and spec compliance (H1 tags, clean markdown) for RAG systems.
+- **Bot Access Validation** — Check if GPTBot, ClaudeBot, and CCBot are blocked via robots.txt or headers.
+- **Citability & Trust (E-E-A-T)** — Analysis of author data, citation-friendly stats, and structured data depth.
+- **Readability Scoring** — Academic-grade reading level analysis for AI consumption.
+
+### 📈 SSR vs CSR Discrepancy Engine
+- **Real-time Rendering Comparison** — Compares the raw server response vs. the fully rendered DOM.
+- **Cosine Similarity Scoring** — Mathematically detects if JavaScript rendering hides critical SEO content from search engine bots.
+
+### ✨ Seosware Pro: Holistic AI Insight Engine
+- **Gemini 2.5 Pro Analysis** — Automated analysis covering Technical SEO, Content, Links, Quality, Security, and Speed.
+- **Prioritized Action Plans** — Multi-category task lists (P0-P3) generated by AI to guide your optimization roadmap.
+- **PDF Reporting** — Export professional, client-ready AI audit reports with one click.
+- **AI Report Caching** — Efficient local storage for historical AI insights.
 
 ---
 
@@ -63,7 +68,7 @@ npx playwright install chromium
 ```bash
 npm run dashboard
 ```
-Open **http://localhost:3000** in your browser. Add URLs and click "Audit Başlat".
+Open **http://localhost:3000** in your browser to start auditing.
 
 ### CLI
 ```bash
@@ -84,32 +89,17 @@ npm run audit -- "https://example.com" --format csv --output report.csv
 ```
 seosware/
 ├── dashboard/
-│   └── index.html              # Web dashboard UI
+│   └── index.html              # Web dashboard UI (Dark-mode Glassmorphism)
 ├── src/
 │   ├── server.js               # Express + SSE server
 │   ├── cli.js                  # CLI entry point
-│   ├── index.js                # Core orchestrator
 │   ├── auditors/
-│   │   ├── meta.js             # Meta tags audit
-│   │   ├── content.js          # Content & headings audit
-│   │   ├── images.js           # Image audit
-│   │   ├── links.js            # Link & accessibility audit
-│   │   ├── performance.js      # Core Web Vitals, Coverage, INP
-│   │   ├── rendering.js        # SSR vs CSR audit
-│   │   ├── mobile.js           # Mobile simulation audit
-│   │   └── ai-search-auditor.js # AI Search Readiness audit
-│   ├── crawler.js              # Site-wide spider & orphan pages
-│   ├── reporters/
-│   │   ├── consoleReporter.js  # Terminal output
-│   │   ├── jsonReporter.js     # JSON file output
-│   │   └── csvReporter.js      # CSV file output
-│   └── utils/
-│       ├── browser.js          # Playwright browser helpers
-│       └── fetchers.js         # Sitemap, robots.txt, similarity
-├── config/
-│   └── default.js              # Default configuration
-├── data/                       # Audit output directory
-└── package.json
+│   │   ├── frontend-auditor.js # 51+ Frontend & Performance metrics
+│   │   ├── ai-search-auditor.js # AI Search & AEO readiness
+│   │   ├── rendering.js        # SSR vs CSR comparison
+│   │   └── ...                 # Meta, Content, Links, Mobile audits
+│   └── ...
+└── ...
 ```
 
 ---
